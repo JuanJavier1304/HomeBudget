@@ -1,0 +1,22 @@
+finanzas-app/
+│
+├── app.py
+│
+├── pages/
+│   ├── gastos.py
+│   ├── ingresos.py
+│   ├── dashboard.py
+│   └── compartidos.py
+│
+├── database/
+│   ├── models.py
+│   ├── connection.py
+│
+├── services/
+│   ├── gastos_service.py
+│   ├── ingresos_service.py
+│   └── reportes_service.py
+│
+├── requirements.txt
+│
+└── docker-compose.yml
