@@ -1,4 +1,5 @@
 import streamlit as st
+from repository.categoria_repository import CategoriaRepository
 
 st.title("💸 Registro de Gastos")
 
@@ -10,15 +11,16 @@ monto = st.number_input(
     step=1000.0
 )
 
+categorias = CategoriaRepository.get_all()
+
+categoria_dict = {
+    nombre: id
+    for id, nombre in categorias
+}
+
 categoria = st.selectbox(
     "Categoría",
-    [
-        "Comida",
-        "Transporte",
-        "Hogar",
-        "Salud",
-        "Entretenimiento"
-    ]
+    list(categoria_dict.keys())
 )
 
 if st.button("Guardar gasto"):
