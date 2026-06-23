@@ -4,7 +4,8 @@ import os
 import psycopg2
 from dotenv import load_dotenv
 
-load_dotenv()
+#load_dotenv()
+load_dotenv(override=True)
 
 
 def get_connection():
@@ -13,5 +14,5 @@ def get_connection():
         dbname=os.getenv("PGDATABASE"),
         user=os.getenv("PGUSER"),
         password=os.getenv("PGPASSWORD"),
-        sslmode="require"
+        sslmode=os.getenv("PGSSLMODE")
     )

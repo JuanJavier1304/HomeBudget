@@ -6,14 +6,167 @@ from repository.metodo_pago_repository import MetodoPagoRepository
 import pandas as pd
 import time
 
+#st.set_page_config(page_title="Admin", layout="wide")
 st.title("⚙️ Administración")
 
-tab1, tab2, tab3 = st.tabs(
-    [
-        "Categorías",
-        "Subcategorías",
-        "Métodos de pago"
-    ]
+@st.dialog("Editar categoría")
+def edit_category(category_id:int, category_new_name:str):
+	"""
+		Dialogo para editar el nombre de una categoría existente.
+		Args:
+			category_id (int): ID de la categoría a editar.
+			category_new_name (str): Nuevo nombre de la categoría. 
+	"""
+	category_name_raw = st.text_input("Nuevo nombre de categoría:", value=category_new_name)
+	category_name = category_name_raw.strip().title()
+
+	if st.button("💾 Guardar cambios", width="stretch"):
+		
+		if CategoriaRepository.get_category_by_name(category_name):
+			st.error("La categoría ya existe.")
+		else:
+			updated_category = CategoriaRepository.update(category_id, category_name)
+
+			if updated_category:
+				up_id, up_name = updated_category #desempaquetamos la tupla
+				st.toast(f"Categoría {up_name} actualizada correctamente.")
+				st.rerun()
+			else:
+				st.error("Error al actualizar la categoría.")
+				st.rerun()
+
+@st.dialog("Eliminar categoría")
+def delete_category(category_id:int, category_name:str):
+	"""
+		Dialogo para eliminar una categoría existente.
+		Args:
+			category_id (int): ID de la categoría a eliminar.
+			category_name (str): Nombre de la categoría. 
+	"""
+	st.write(f"¿Estás seguro de que quieres eliminar la categoría {category_name}?")
+	st.write("Si eliminas esta categoría, también se eliminarán todas las subcategorías asociadas")
+
+	with st.container(horizontal=True, border=True, vertical_alignment="center", horizontal_alignment="center", width="stretch"):
+
+		if st.button(":material/check:", key=f"confirm_delete_cat_{category_id}", type="primary"):
+			success = CategoriaRepository.delete(category_id)
+
+			if success:
+				st.toast("Categoría eliminada correctamente")
+				st.rerun()
+			else:
+				st.error("Error al eliminar categoría")
+		
+		if st.button("Cancelar"):
+			st.rerun()
+
+@st.dialog("Editar subcategoría")
+def edit_subcategory(subcategory_id:int, subcategory_new_name:str):
+	"""
+		Dialogo para editar el nombre de una subcategoría existente.
+		Args:
+			subcategory_id (int): ID de la subcategoría a editar.
+			subcategory_new_name (str): Nuevo nombre de la subcategoría. 
+	"""
+	subcategory_name_raw = st.text_input("Nuevo nombre de subcategoría:", value=subcategory_new_name)
+	subcategory_name = subcategory_name_raw.strip().title()
+
+	if st.button("💾 Guardar cambios", width="stretch"):
+		
+		if SubcategoriaRepository.get_subcategory_by_name(subcategory_name):
+			st.error("La subcategoría ya existe.")
+		else:
+			updated_subcategory = SubcategoriaRepository.update(subcategory_id, subcategory_name)
+
+			if updated_subcategory:
+				up_id, up_name = updated_subcategory #desempaquetamos la tupla
+				st.toast(f"Subcategoría {up_name} actualizada correctamente.")
+				st.rerun()
+			else:
+				st.error("Error al actualizar la subcategoría.")
+				st.rerun()
+
+@st.dialog("Eliminar subcategoría")
+def delete_subcategory(subcategory_id:int, subcategory_name:str):
+	"""
+		Dialogo para eliminar una subcategoría existente.
+		Args:
+			subcategory_id (int): ID de la subcategoría a eliminar.
+			subcategory_name (str): Nombre de la subcategoría. 
+	"""
+	st.write(f"¿Estás seguro de que quieres eliminar la subcategoría {subcategory_name}?")
+
+	with st.container(horizontal=True, border=True, vertical_alignment="center", horizontal_alignment="center", width="stretch"):
+
+		if st.button(":material/check:", key=f"confirm_delete_subcat_{subcategory_id}", type="primary"):
+			success = SubcategoriaRepository.delete(subcategory_id)
+
+			if success:
+				st.toast("Subcategoría eliminada correctamente")
+				st.rerun()
+			else:
+				st.error("Error al eliminar subcategoría")
+		
+		if st.button("Cancelar"):
+			st.rerun()
+
+@st.dialog("Editar método de pago")
+def edit_payment_method(payment_method_id:int, payment_method_new_name:str):
+	"""
+		Dialogo para editar el nombre de un método de pago existente.
+		Args:
+			payment_method_id (int): ID del método de pago a editar.
+			payment_method_new_name (str): Nuevo nombre del método de pago. 
+	"""
+	payment_method_name_raw = st.text_input("Nuevo nombre del método de pago:", value=payment_method_new_name)
+	payment_method_name = payment_method_name_raw.strip().title()
+
+	if st.button("💾 Guardar cambios", width="stretch"):
+		
+		if MetodoPagoRepository.get_payment_method_by_name(payment_method_name):
+			st.error("El método de pago ya existe.")
+		else:
+			updated_payment_method = MetodoPagoRepository.update(payment_method_id, payment_method_name)
+
+			if updated_payment_method:
+				up_id, up_name = updated_payment_method #desempaquetamos la tupla
+				st.toast(f"Método de pago {up_name} actualizada correctamente.")
+				st.rerun()
+			else:
+				st.error("Error al actualizar el método de pago.")
+				st.rerun()
+				
+@st.dialog("Eliminar método de pago")
+def delete_payment_method(payment_method_id:int, payment_method_name:str):
+	"""
+		Dialogo para eliminar un método de pago existente.
+		Args:
+			payment_method_id (int): ID del método de pago a eliminar.
+			payment_method_name (str): Nombre del método de pago. 
+	"""
+	st.write(f"¿Estás seguro de que quieres eliminar el método de pago {payment_method_name}?")
+
+	with st.container(horizontal=True, border=True, vertical_alignment="center", horizontal_alignment="center", width="stretch"):
+
+		if st.button(":material/check:", key=f"confirm_delete_pm_{payment_method_id}", type="primary"):
+			success = MetodoPagoRepository.delete(payment_method_id)
+
+			if success:
+				st.toast("Método de pago eliminado correctamente")
+				st.rerun()
+			else:
+				st.error("Error al eliminar método de pago")
+		
+		if st.button("Cancelar"):
+			st.rerun()
+
+
+tab_category, tab_subcategory, tab_payment_method = st.tabs(
+	[
+		"Categorías",
+		"Subcategorías",
+		"Métodos de pago"
+	]
 )
 
 # Listamos todas las categorías
@@ -21,209 +174,143 @@ df_list_categorias = CategoriaRepository.get_all()
 # Listamos todos los métodos de pago
 df_list_metodo_pago = MetodoPagoRepository.get_all()
 
-with tab1:
+with tab_category:
 
-    df_edited_category = st.data_editor(
-        df_list_categorias,
-        hide_index=True,
-        use_container_width=True,
-        num_rows="dynamic",
-        column_config={
-            "id": st.column_config.NumberColumn(
-                "ID",
-                disabled=True,
-                width="small"
-            ),
-            "name": st.column_config.TextColumn(
-                "Nombre",
-                width="large",
-                required=True
-            )
-        },
-        key="data_editor_categoria"
-    )
+	# Agregar categoría
+	ti_nueva_categoria_raw = st.text_input("Nueva categoría", key="new_category")
+	ti_nueva_categoria = ti_nueva_categoria_raw.strip().title()
 
-    if st.button(
-        "💾 Guardar cambios",
-        use_container_width=True,
-        key="btn_guardar_categorias"
-    ):
+	if st.button(
+		label="💾 Guardar categoría",
+		key="bttn_add_category",
+		width="stretch",
+		type="primary"
+	):
+		if ti_nueva_categoria:
+			if CategoriaRepository.get_category_by_name(ti_nueva_categoria):
+				st.error("La categoría ya existe.")
+			else:
+				CategoriaRepository.insert(ti_nueva_categoria)
+				st.success("Categoría creada correctamente.")
+				st.rerun()
+		else:
+			st.error("Categoría no puede estar vacía")
 
-        # ELIMINAR REGISTROS
-        ids_originales = set(df_list_categorias["id"].dropna())
-        ids_finales = set(df_edited_category["id"].dropna())
-        ids_eliminados = ids_originales - ids_finales
-        for id_categoria in ids_eliminados:
-            CategoriaRepository.delete(id_categoria)
+	# Listar categorías existentes
+	for i, categoria in df_list_categorias.iterrows():
+		with st.container(horizontal=True, border=True, vertical_alignment="center", width="stretch"):
+			col_id, col_name, col_edit, col_delete = st.columns([1, 5, 1, 1])
 
-        for _, row in df_edited_category.iterrows():
+			col_id.write(f"{categoria["id"]}")
+			col_name.write(f"{categoria["name"]}")
+			col_edit.button(label=":material/edit:",
+			key=f"edit_{categoria["id"]}",
+			on_click=edit_category,
+			args=(categoria["id"],categoria["name"]),
+			type="secondary"
+			)
+			col_delete.button(label=":material/delete:",
+			key=f"delete_{categoria["id"]}",
+			on_click=delete_category,
+			args=(categoria["id"],categoria["name"]),
+			type="primary"
+			)
 
-            nombre = str(row["name"]).strip().title()
+with tab_subcategory:
 
-            if not nombre:
-                continue
+	categoria_id = st.selectbox(
+		"Categoría",
+		options=df_list_categorias["id"].tolist(),
+		format_func=lambda x:
+		df_list_categorias.loc[
+			df_list_categorias["id"] == x,
+			"name"
+		].iloc[0],
+		key="selecbox_subcategoria"
+	)
 
-            # NUEVO
-            if pd.isna(row["id"]):
-                CategoriaRepository.insert(nombre)
+	df_list_subcategorias = SubcategoriaRepository.list_by_category(categoria_id)
 
-            # UPDATE
-            else:
-                registro_original = df_list_categorias[
-                    df_list_categorias["id"] == row["id"]
-                    ].iloc[0]
+	# Agregar subcategoría
+	ti_nueva_subcategoria_raw = st.text_input("Nueva subcategoría", key="new_subcategory")
+	ti_nueva_subcategoria = ti_nueva_subcategoria_raw.strip().title()
 
-                if registro_original["name"] != nombre:
-                    CategoriaRepository.update(
-                        row["id"],
-                        nombre
-                    )
+	if st.button(
+		label="💾 Guardar subcategoría",
+		key="bttn_add_subcategory",
+		width="stretch",
+		type="primary"
+	):
+		if ti_nueva_subcategoria:
+			if SubcategoriaRepository.get_subcategory_by_name(ti_nueva_subcategoria):
+				st.error("La subcategoría ya existe.")
+			else:
+				SubcategoriaRepository.insert(categoria_id, ti_nueva_subcategoria)
+				st.success("Subcategoría creada correctamente.")
+				st.rerun()
+		else:
+			st.error("Subcategoría no puede estar vacía")
 
-        st.success("Cambios guardados")
+	# Listar categorías existentes
+	for i, subcategoria in df_list_subcategorias.iterrows():
+		with st.container(horizontal=True, border=True, vertical_alignment="center", width="stretch"):
+			col_id, col_name, col_edit, col_delete = st.columns([1, 5, 1, 1])
 
-        st.rerun()
+			col_id.write(f"{subcategoria["id"]}")
+			col_name.write(f"{subcategoria["name"]}")
+			col_edit.button(label=":material/edit:",
+			key=f"edit_subcat_{subcategoria["id"]}",
+			on_click=edit_subcategory,
+			args=(subcategoria["id"],subcategoria["name"]),
+			type="secondary"
+			)
+			col_delete.button(label=":material/delete:",
+			key=f"delete_subcat_{subcategoria["id"]}",
+			on_click=delete_subcategory,
+			args=(subcategoria["id"],subcategoria["name"]),
+			type="primary"
+			)
 
-with tab2:
+with tab_payment_method:
 
-    categoria_id = st.selectbox(
-        "Categoría",
-        options=df_list_categorias["id"].tolist(),
-        format_func=lambda x:
-        df_list_categorias.loc[
-            df_list_categorias["id"] == x,
-            "name"
-        ].iloc[0],
-        key="selecbox_subcategoria"
-    )
+	# Agregar método de pago
+	ti_new_payment_method_raw = st.text_input("Nuevo método de pago", key="new_payment_method")
+	ti_new_payment_method = ti_new_payment_method_raw.strip().title()
 
-    df_list_subcategorias = SubcategoriaRepository.list_by_category(categoria_id)
+	if st.button(
+		label="💾 Guardar método de pago",
+		key="bttn_add_payment_method",
+		width="stretch",
+		type="primary"
+	):
+		if ti_new_payment_method:
+			if MetodoPagoRepository.get_payment_method_by_name(ti_new_payment_method):
+				st.error("El método de pago ya existe.")
+			else:
+				MetodoPagoRepository.insert(ti_new_payment_method)
+				st.success("Método de pago creado correctamente.")
+				st.rerun()
+		else:
+			st.error("Método de pago no puede estar vacía")
 
-    st.markdown("#### Subcategorías")
-    df_edited_subcategory = st.data_editor(
-        df_list_subcategorias,
-        hide_index=True,
-        use_container_width=True,
-        num_rows="dynamic",
-        column_config={
-            "id": st.column_config.NumberColumn(
-                "ID",
-                disabled=True,
-                width="small"
-            ),
-            "category_name": st.column_config.TextColumn(
-                "Categoría",
-                disabled=True,
-                width="medium",
-            ),
-            "name": st.column_config.TextColumn(
-                "Subcategoría",
-                required=True,
-                width="mediums",
-            )
-        },
-        key="data_editor_subcategoria"
-    )
+	# Listar métodos de pago existentes
+	for i, payment_method in df_list_metodo_pago.iterrows():
+		with st.container(horizontal=True, border=True, vertical_alignment="center", width="stretch"):
+			col_id, col_name, col_edit, col_delete = st.columns([1, 5, 1, 1])
 
+			col_id.write(f"{payment_method["id"]}")
+			col_name.write(f"{payment_method["name"]}")
+			col_edit.button(label=":material/edit:",
+			key=f"edit_pm_{payment_method["id"]}",
+			on_click=edit_payment_method,
+			args=(payment_method["id"],payment_method["name"]),
+			type="secondary"
+			)
+			col_delete.button(label=":material/delete:",
+			key=f"delete_pm_{payment_method["id"]}",
+			on_click=delete_payment_method,
+			args=(payment_method["id"],payment_method["name"]),
+			type="primary"
+			)
 
-    if st.button(
-        "💾 Guardar cambios",
-        use_container_width=True,
-        key="btn_guardar_subcategorias"
-    ):
-
-        # ELIMINAR REGISTROS
-        ids_originales_sc = set(df_list_subcategorias["id"].dropna())
-        ids_finales_sc = set(df_edited_subcategory["id"].dropna())
-        ids_eliminados_sc = ids_originales_sc - ids_finales_sc
-        for id_categoria in ids_eliminados_sc:
-            SubcategoriaRepository.delete(id_categoria)
-
-        for _, row in df_edited_subcategory.iterrows():
-
-            nombre_sc = str(row["name"]).strip().title()
-
-            if not nombre_sc:
-                continue
-
-            # NUEVO
-            if pd.isna(row["id"]):
-                SubcategoriaRepository.insert(categoria_id, nombre_sc)
-
-            # UPDATE
-            else:
-                registro_original = df_list_subcategorias[
-                    df_list_subcategorias["id"] == row["id"]
-                    ].iloc[0]
-
-                if registro_original["name"] != nombre_sc:
-                    SubcategoriaRepository.update(
-                        row["id"],
-                        nombre_sc
-                    )
-
-        st.success("Cambios guardados")
-
-        st.rerun()
-
-with tab3:
-
-    df_edited_metodo_pago = st.data_editor(
-        df_list_metodo_pago,
-        hide_index=True,
-        use_container_width=True,
-        num_rows="dynamic",
-        column_config={
-            "id": st.column_config.NumberColumn(
-                "ID",
-                disabled=True,
-                width="small"
-            ),
-            "name": st.column_config.TextColumn(
-                "Nombre",
-                width="large",
-                required=True
-            )
-        },
-        key="data_editor_metodo_pago"
-    )
-
-    if st.button(
-        "💾 Guardar cambios",
-        use_container_width=True,
-        key="btn_guardar_metodo_pago"
-    ):
-
-        # ELIMINAR REGISTROS
-        ids_originales = set(df_list_metodo_pago["id"].dropna())
-        ids_finales = set(df_edited_metodo_pago["id"].dropna())
-        ids_eliminados = ids_originales - ids_finales
-        for id_metodo_pago in ids_eliminados:
-            MetodoPagoRepository.delete(id_metodo_pago)
-
-        for _, row in df_edited_metodo_pago.iterrows():
-
-            nombre = str(row["name"]).strip().title()
-
-            if not nombre:
-                continue
-
-            # NUEVO
-            if pd.isna(row["id"]):
-                MetodoPagoRepository.insert(nombre)
-
-            # UPDATE
-            else:
-                registro_original = df_list_metodo_pago[
-                    df_list_metodo_pago["id"] == row["id"]
-                    ].iloc[0]
-
-                if registro_original["name"] != nombre:
-                    MetodoPagoRepository.update(
-                        row["id"],
-                        nombre
-                    )
-
-        st.success("Cambios guardados")
-
-        st.rerun()
 
