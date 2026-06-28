@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 #load_dotenv()
 load_dotenv(override=True)
 
-
 def get_connection():
     return psycopg2.connect(
         host=os.getenv("PGHOST"),

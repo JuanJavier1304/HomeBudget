@@ -1,0 +1,42 @@
+
+# Default ignored files
+/shelf/
+/workspace.xml
+
+# Editor-based HTTP Client requests
+/httpRequests/
+
+# Entorno virtual de Python
+.venv/
+venv/
+env/
+ENV/
+
+# Python
+__pycache__/
+**/__pycache__/
+*.pyc
+
+# IDEs
+.vscode/
+.idea/
+
+# Scripts de prueba personales
+test_code.py
+
+# Archivos de configuración y credenciales (Base de datos)
+.env
+
+# Carpetas de respaldo locales
+"archivos desfasados"/
+archivos desfasados/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Streamlit
+.streamlit/secrets.toml

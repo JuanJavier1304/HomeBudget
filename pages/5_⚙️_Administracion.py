@@ -5,9 +5,23 @@ from repository.subcategoria_repository import SubcategoriaRepository
 from repository.metodo_pago_repository import MetodoPagoRepository
 import pandas as pd
 import time
+from services.session_service import require_login
+
+######### Autenticación #########
+_="""require_login()
+with st.sidebar:
+    st.write(f"👤 {st.session_state['username']}")
+    if st.button("Cerrar sesión"):
+        st.session_state.clear()
+        st.switch_page("app.py")
+        """
+######### Fin de Autenticación #########
 
 #st.set_page_config(page_title="Admin", layout="wide")
 st.title("⚙️ Administración")
+
+def formatear_input(input_name):
+	return input_name.strip().title()
 
 @st.dialog("Editar categoría")
 def edit_category(category_id:int, category_new_name:str):
@@ -18,7 +32,7 @@ def edit_category(category_id:int, category_new_name:str):
 			category_new_name (str): Nuevo nombre de la categoría. 
 	"""
 	category_name_raw = st.text_input("Nuevo nombre de categoría:", value=category_new_name)
-	category_name = category_name_raw.strip().title()
+	category_name = formatear_input(category_name_raw)
 
 	if st.button("💾 Guardar cambios", width="stretch"):
 		
@@ -61,7 +75,7 @@ def delete_category(category_id:int, category_name:str):
 			st.rerun()
 
 @st.dialog("Editar subcategoría")
-def edit_subcategory(subcategory_id:int, subcategory_new_name:str):
+def edit_subcategory(category_id:int, subcategory_id:int, subcategory_new_name:str):
 	"""
 		Dialogo para editar el nombre de una subcategoría existente.
 		Args:
@@ -69,11 +83,11 @@ def edit_subcategory(subcategory_id:int, subcategory_new_name:str):
 			subcategory_new_name (str): Nuevo nombre de la subcategoría. 
 	"""
 	subcategory_name_raw = st.text_input("Nuevo nombre de subcategoría:", value=subcategory_new_name)
-	subcategory_name = subcategory_name_raw.strip().title()
+	subcategory_name = formatear_input(subcategory_name_raw)
 
 	if st.button("💾 Guardar cambios", width="stretch"):
 		
-		if SubcategoriaRepository.get_subcategory_by_name(subcategory_name):
+		if SubcategoriaRepository.get_subcategory_by_name(category_id, subcategory_name):
 			st.error("La subcategoría ya existe.")
 		else:
 			updated_subcategory = SubcategoriaRepository.update(subcategory_id, subcategory_name)
@@ -119,7 +133,7 @@ def edit_payment_method(payment_method_id:int, payment_method_new_name:str):
 			payment_method_new_name (str): Nuevo nombre del método de pago. 
 	"""
 	payment_method_name_raw = st.text_input("Nuevo nombre del método de pago:", value=payment_method_new_name)
-	payment_method_name = payment_method_name_raw.strip().title()
+	payment_method_name = formatear_input(payment_method_name_raw)
 
 	if st.button("💾 Guardar cambios", width="stretch"):
 		
@@ -169,8 +183,6 @@ tab_category, tab_subcategory, tab_payment_method = st.tabs(
 	]
 )
 
-# Listamos todas las categorías
-df_list_categorias = CategoriaRepository.get_all()
 # Listamos todos los métodos de pago
 df_list_metodo_pago = MetodoPagoRepository.get_all()
 
@@ -178,7 +190,7 @@ with tab_category:
 
 	# Agregar categoría
 	ti_nueva_categoria_raw = st.text_input("Nueva categoría", key="new_category")
-	ti_nueva_categoria = ti_nueva_categoria_raw.strip().title()
+	ti_nueva_categoria = formatear_input(ti_nueva_categoria_raw)
 
 	if st.button(
 		label="💾 Guardar categoría",
@@ -197,22 +209,24 @@ with tab_category:
 			st.error("Categoría no puede estar vacía")
 
 	# Listar categorías existentes
-	for i, categoria in df_list_categorias.iterrows():
+	df_list_categorias = CategoriaRepository.get_all()
+	categorias_ids = list(df_list_categorias)
+	for id_category, name_category in df_list_categorias.items():
 		with st.container(horizontal=True, border=True, vertical_alignment="center", width="stretch"):
 			col_id, col_name, col_edit, col_delete = st.columns([1, 5, 1, 1])
 
-			col_id.write(f"{categoria["id"]}")
-			col_name.write(f"{categoria["name"]}")
+			col_id.write(f"{id_category}")
+			col_name.write(f"{name_category}")
 			col_edit.button(label=":material/edit:",
-			key=f"edit_{categoria["id"]}",
+			key=f"edit_{id_category}",
 			on_click=edit_category,
-			args=(categoria["id"],categoria["name"]),
+			args=(id_category,name_category),
 			type="secondary"
 			)
 			col_delete.button(label=":material/delete:",
-			key=f"delete_{categoria["id"]}",
+			key=f"delete_{id_category}",
 			on_click=delete_category,
-			args=(categoria["id"],categoria["name"]),
+			args=(id_category,name_category),
 			type="primary"
 			)
 
@@ -220,20 +234,15 @@ with tab_subcategory:
 
 	categoria_id = st.selectbox(
 		"Categoría",
-		options=df_list_categorias["id"].tolist(),
-		format_func=lambda x:
-		df_list_categorias.loc[
-			df_list_categorias["id"] == x,
-			"name"
-		].iloc[0],
+		options=categorias_ids,
+		format_func=lambda x:df_list_categorias[x],
 		key="selecbox_subcategoria"
 	)
-
 	df_list_subcategorias = SubcategoriaRepository.list_by_category(categoria_id)
 
 	# Agregar subcategoría
 	ti_nueva_subcategoria_raw = st.text_input("Nueva subcategoría", key="new_subcategory")
-	ti_nueva_subcategoria = ti_nueva_subcategoria_raw.strip().title()
+	ti_nueva_subcategoria = formatear_input(ti_nueva_subcategoria_raw)
 
 	if st.button(
 		label="💾 Guardar subcategoría",
@@ -242,7 +251,7 @@ with tab_subcategory:
 		type="primary"
 	):
 		if ti_nueva_subcategoria:
-			if SubcategoriaRepository.get_subcategory_by_name(ti_nueva_subcategoria):
+			if SubcategoriaRepository.get_subcategory_by_name(categoria_id,ti_nueva_subcategoria):
 				st.error("La subcategoría ya existe.")
 			else:
 				SubcategoriaRepository.insert(categoria_id, ti_nueva_subcategoria)
@@ -252,30 +261,30 @@ with tab_subcategory:
 			st.error("Subcategoría no puede estar vacía")
 
 	# Listar categorías existentes
-	for i, subcategoria in df_list_subcategorias.iterrows():
+	for subcategory_id, subcategory_name in df_list_subcategorias.items():
 		with st.container(horizontal=True, border=True, vertical_alignment="center", width="stretch"):
 			col_id, col_name, col_edit, col_delete = st.columns([1, 5, 1, 1])
 
-			col_id.write(f"{subcategoria["id"]}")
-			col_name.write(f"{subcategoria["name"]}")
+			col_id.write(f"{subcategory_id}")
+			col_name.write(f"{subcategory_name}")
 			col_edit.button(label=":material/edit:",
-			key=f"edit_subcat_{subcategoria["id"]}",
+			key=f"edit_subcat_{subcategory_id}",
 			on_click=edit_subcategory,
-			args=(subcategoria["id"],subcategoria["name"]),
+			args=(categoria_id, subcategory_id, subcategory_name),
 			type="secondary"
 			)
 			col_delete.button(label=":material/delete:",
-			key=f"delete_subcat_{subcategoria["id"]}",
+			key=f"delete_subcat_{subcategory_id}",
 			on_click=delete_subcategory,
-			args=(subcategoria["id"],subcategoria["name"]),
+			args=(subcategory_id,subcategory_name),
 			type="primary"
 			)
 
 with tab_payment_method:
 
-	# Agregar método de pago
+	# Agregar metodo de pago
 	ti_new_payment_method_raw = st.text_input("Nuevo método de pago", key="new_payment_method")
-	ti_new_payment_method = ti_new_payment_method_raw.strip().title()
+	ti_new_payment_method = formatear_input(ti_new_payment_method_raw)
 
 	if st.button(
 		label="💾 Guardar método de pago",
@@ -294,22 +303,22 @@ with tab_payment_method:
 			st.error("Método de pago no puede estar vacía")
 
 	# Listar métodos de pago existentes
-	for i, payment_method in df_list_metodo_pago.iterrows():
+	for payment_method_id, payment_method_name in df_list_metodo_pago.items():
 		with st.container(horizontal=True, border=True, vertical_alignment="center", width="stretch"):
 			col_id, col_name, col_edit, col_delete = st.columns([1, 5, 1, 1])
 
-			col_id.write(f"{payment_method["id"]}")
-			col_name.write(f"{payment_method["name"]}")
+			col_id.write(f"{payment_method_id}")
+			col_name.write(f"{payment_method_name}")
 			col_edit.button(label=":material/edit:",
-			key=f"edit_pm_{payment_method["id"]}",
+			key=f"edit_pm_{payment_method_id}",
 			on_click=edit_payment_method,
-			args=(payment_method["id"],payment_method["name"]),
+			args=(payment_method_id,payment_method_name),
 			type="secondary"
 			)
 			col_delete.button(label=":material/delete:",
-			key=f"delete_pm_{payment_method["id"]}",
+			key=f"delete_pm_{payment_method_id}",
 			on_click=delete_payment_method,
-			args=(payment_method["id"],payment_method["name"]),
+			args=(payment_method_id,payment_method_name),
 			type="primary"
 			)
 

@@ -2,7 +2,7 @@ from database.connection import get_connection
 import pandas as pd
 
 
-class CategoriaRepository:
+class UsuarioRepository:
 
 	@staticmethod
 	def get_all():
@@ -10,9 +10,8 @@ class CategoriaRepository:
 		cursor = conn.cursor()
 
 		cursor.execute("""
-			SELECT id, name
-			FROM categoria
-			ORDER BY id
+			SELECT id, firstname, lastname, username, password
+			FROM usuario
 		""")
 
 		result = cursor.fetchall()
