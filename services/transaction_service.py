@@ -60,7 +60,7 @@ class TransactionService(BaseService):
         # 2. Convertir la lista de filas mapeadas a DataFrame
         columns_dataframe_config = {
             "id": None,
-            "transaction_date": st.column_config.DateColumn("Fecha de Transacción"),
+            "transaction_date": st.column_config.DateColumn("Fecha de Transacción",format="YYYY-MM-DD"),
             "transaction_type_id": None,
             "transaction_type_name": st.column_config.Column("Tipo Transacción"),
             "description": st.column_config.Column("Descripción"),

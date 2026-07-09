@@ -461,7 +461,8 @@ if isinstance(date_range, tuple) and len(date_range) == 2:
         selection_mode="single-row",
         use_container_width=True,
         column_config=columns_dataframe_config,
-        hide_index=True
+        hide_index=True,
+        height = 500
     )
 
     # Creamos los botones en el contenedor creado previamente

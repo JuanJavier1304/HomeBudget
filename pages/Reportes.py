@@ -8,10 +8,10 @@ from services.transaction_service import TransactionService
 from services.date_services import get_current_date_YYYYMM
 
 # Útiles para el script
+st.set_page_config(page_title="Reporte Mensual", layout="wide")
 USER_ID = get_current_user_id() ###### Obtener el usuario en sesión
 require_login() ###### Autenticación (si no estás en sesión, no muestra página) ######
 
-#st.cache_data.clear()
 @st.cache_data
 def get_transactions_by_month(year, month):
     with get_session() as session:
@@ -30,60 +30,84 @@ def household_expense_style(row):
     else:
         return [''] * len(row)
 
+def color_transaction_type(value):
+    if value == "Gasto":
+        return "color: #C62828"
+    elif value == "Ingreso":
+        return "color: #2E7D32;"
+    return ""
 
-#st.title(":material/bar_chart: Reportes")
-st.header(":bar_chart: Control de Gastos e Ingresos")
+def color_amount(row):
+    if row["final_amount"] == "Ingreso":
+        return "color: #2E7D32;"
+    else:
+        return "color: #C62828;"
 
-init_dates = get_current_date_YYYYMM()
-col_year, col_month, col_spaces = st.columns([1,1,2])
-with col_year:
-    # Selector de Año: Se posiciona automáticamente en el año actual
-    selected_year = st.selectbox(
-        "Año",
-        options=init_dates["anos"],
-        index=init_dates["idx_ano"]
-    )
-with col_month:
-    # Selector de Mes: Se posiciona automáticamente en el mes actual
-    selected_month = st.selectbox(
-        "Mes",
-        options=init_dates["meses"],
-        index=init_dates["idx_mes"],
-        format_func=lambda x: init_dates["mapeo_meses"][x]
-    )
+st.title(":material/bar_chart: Reporte mensual")
+#st.header(":bar_chart: Control de Gastos e Ingresos", divider="blue")
 
-# 1: DF, 2: Nombre de columnas, 3: Orden de columnas
-df_transactions, columns_dataframe_config, columns_order = get_transactions_by_month(selected_year, selected_month)
-df_show = df_transactions[columns_order]
+with st.container(border=True):
+    init_dates = get_current_date_YYYYMM()
+    col_year, col_month, col_spaces = st.columns([1,1,2])
+    with col_year:
+        # Selector de Año: Se posiciona automáticamente en el año actual
+        selected_year = st.selectbox(
+            "Año",
+            options=init_dates["anos"],
+            index=init_dates["idx_ano"]
+        )
+    with col_month:
+        # Selector de Mes: Se posiciona automáticamente en el mes actual
+        selected_month = st.selectbox(
+            "Mes",
+            options=init_dates["meses"],
+            index=init_dates["idx_mes"],
+            format_func=lambda x: init_dates["mapeo_meses"][x]
+        )
 
-total_income, total_expense, balance = calculare_balance(df_transactions)
-colsumm1, colsumm2, colsumm3 = st.columns(3)
-with colsumm1:
-    st.metric(
-        label="🟢 Total Ingresos",
-        value=f"S/{total_income:,.2f}",
-        delta=total_income if total_income > 0 else None
-    )
-with colsumm2:
-    st.metric(
-        label="🔴 Total Gastos",
-        value=f"S/{total_expense:,.2f}",
-        delta=-total_expense if total_expense > 0 else None
-    )
-with colsumm3:
-    st.metric(
-        label="⚖️ Balance Neto",
-        value=f"S/{balance:,.2f}",
-        delta=balance
-    )
+    # 1: DF, 2: Nombre de columnas, 3: Orden de columnas
+    df_transactions, columns_dataframe_config, columns_order = get_transactions_by_month(selected_year, selected_month)
+    df_show = df_transactions[columns_order]
 
-df_style = df_show.style.apply(household_expense_style, axis=1)
+    total_income, total_expense, balance = calculare_balance(df_transactions)
+    colsumm1, colsumm2, colsumm3 = st.columns(3)
+    with colsumm1:
+        st.metric(
+            label="🟢 Total Ingresos",
+            value=f"S/{total_income:,.2f}",
+            delta=total_income if total_income > 0 else None
+        )
+    with colsumm2:
+        st.metric(
+            label="🔴 Total Gastos",
+            value=f"S/{total_expense:,.2f}",
+            delta=-total_expense if total_expense > 0 else None
+        )
+    with colsumm3:
+        st.metric(
+            label="⚖️ Balance Neto",
+            value=f"S/{balance:,.2f}",
+            delta=balance
+        )
+
+df_styled = (
+    df_show.style
+    .apply(household_expense_style, axis=1)
+    .apply(lambda row: [color_amount(row)] if row.name >= 0 else [""],
+        subset=["final_amount"],
+        axis=1)
+    .map(color_transaction_type, subset=["transaction_type_name"])
+    .set_properties(subset=["final_amount"],**{"font-weight": "bold"})
+)
 # Mostrar el detalle
 if df_show.empty:
     st.info("No hay información para mostrar, seleccione otro año/mes")
 else:
     st.dataframe(
-        df_style,
+        df_styled,
         column_config=columns_dataframe_config,
-        hide_index=True
+        hide_index=True,
+        use_container_width=True,
+        height = 500
     )
+    st.write(":blue-background[Nota: En celeste los gastos compartidos.]")
