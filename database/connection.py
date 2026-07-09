@@ -1,17 +1,27 @@
 # database/connection.py
-
 import os
-import psycopg2
-from dotenv import load_dotenv
 
-#load_dotenv()
+from dotenv import load_dotenv
+from sqlmodel import Session, create_engine
+
 load_dotenv(override=True)
 
-def get_connection():
-    return psycopg2.connect(
-        host=os.getenv("PGHOST"),
-        dbname=os.getenv("PGDATABASE"),
-        user=os.getenv("PGUSER"),
-        password=os.getenv("PGPASSWORD"),
-        sslmode=os.getenv("PGSSLMODE")
-    )
+HOST = os.getenv('PGHOST')
+USER = os.getenv('PGUSER')
+PASSWORD = os.getenv('PGPASSWORD')
+DATABASE = os.getenv('PGDATABASE')
+
+DATABASE_URL = (
+    f"postgresql://{USER}:"
+    f"{PASSWORD}@"
+    f"{HOST}/"
+    f"{DATABASE}"
+)
+
+engine = create_engine(
+    DATABASE_URL,
+    echo=False
+)
+
+def get_session():
+    return Session(engine)
