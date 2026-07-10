@@ -41,22 +41,24 @@ else:
     col1, col2, col3 = st.columns([1,3,1])
     with col2:
         st.title("Home:orange[Budget]")
-        st.header("Iniciar Sesión")
-        username = st.text_input("Usuario", key="ti_username")
-        password = st.text_input("Contraseña", type="password", key="ti_password")
-        btn_ingresar = st.button("Ingresar", key="btn_ingresar", type="primary")
+        with st.form("login_form"):
+            st.header("Iniciar Sesión")
+            username = st.text_input("Usuario", key="ti_username")
+            password = st.text_input("Contraseña", type="password", key="ti_password")
+            #btn_ingresar = st.button("Ingresar", key="btn_ingresar", type="primary")
+            btn_ingresar = st.form_submit_button("Ingresar",type="primary")
 
-    if btn_ingresar:
-        user_to_authenticate = User(username=username, password_hash=password)
-        auth_user = authenticate_user(user_to_authenticate)  # devuelve (id, username, password)
-        if auth_user is not None:
-            st.session_state.logged_in = True
-            st.session_state.user_id = auth_user[0]
-            st.session_state.firstname = auth_user[1]
-            # st.switch_page("pages/Transacciones.py")
-            st.rerun()
-        else:
-            st.error("Usuario o contraseña incorrectos")
+        if btn_ingresar:
+            user_to_authenticate = User(username=username, password_hash=password)
+            auth_user = authenticate_user(user_to_authenticate)  # devuelve (id, username, password)
+            if auth_user is not None:
+                st.session_state.logged_in = True
+                st.session_state.user_id = auth_user[0]
+                st.session_state.firstname = auth_user[1]
+                # st.switch_page("pages/Transacciones.py")
+                st.rerun()
+            else:
+                st.error("Usuario o contraseña incorrectos")
 
 # 4. Ejecutar la página activa (solo si está logueado)
 if st.session_state.logged_in:

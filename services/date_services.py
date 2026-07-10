@@ -1,5 +1,6 @@
 import datetime
 import calendar
+import pandas as pd
 
 def get_dates_current_month():
     """
@@ -46,7 +47,13 @@ def get_current_date_YYYYMM():
         "idx_mes": idx_mes_defecto
     }
 
+def remove_timezone(df):
+    df = df.copy()
 
+    for col in df.columns:
+        if pd.api.types.is_datetime64_any_dtype(df[col]):
+            df[col] = df[col].dt.tz_localize(None)
 
+    return df
 
 

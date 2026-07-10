@@ -1,22 +1,25 @@
 import streamlit as st
+from io import BytesIO
+from openpyxl import Workbook
 
 # Importamos conexión
 from database.connection import get_session
 # Importamos script para autenticación
 from services.session_service import require_login, get_current_user_id
 from services.transaction_service import TransactionService
-from services.date_services import get_current_date_YYYYMM
+from services.date_services import get_current_date_YYYYMM, remove_timezone
+from services.utils_services import rename_columns_df_excel
 
 # Útiles para el script
 st.set_page_config(page_title="Reporte Mensual", layout="wide")
-USER_ID = get_current_user_id() ###### Obtener el usuario en sesión
 require_login() ###### Autenticación (si no estás en sesión, no muestra página) ######
+USER_ID = get_current_user_id() ###### Obtener el usuario en sesión
 
 @st.cache_data
-def get_transactions_by_month(year, month):
+def get_transactions_by_month(user_id, year, month):
     with get_session() as session:
         service = TransactionService(session)
-        return service.get_transactions_by_month(USER_ID, year, month)
+        return service.get_transactions_by_month(user_id, year, month)
 
 def calculare_balance(df):
     with get_session() as session:
@@ -24,7 +27,6 @@ def calculare_balance(df):
         return service.calculare_balance(df)
 
 def household_expense_style(row):
-    # Si la columna is_household_expense es True (o 1), aplicamos el fondo celeste suave
     if row['is_household_expense']:
         return ['background-color: #E6F2FF'] * len(row)
     else:
@@ -42,6 +44,24 @@ def color_amount(row):
         return "color: #2E7D32;"
     else:
         return "color: #C62828;"
+
+def generate_excel(df):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = f"Reporte"
+
+    # Encabezados
+    ws.append(df.columns.tolist())
+
+    # Datos
+    for row in df.itertuples(index=False):
+        ws.append(row)
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return output
 
 st.title(":material/bar_chart: Reporte mensual")
 #st.header(":bar_chart: Control de Gastos e Ingresos", divider="blue")
@@ -66,7 +86,7 @@ with st.container(border=True):
         )
 
     # 1: DF, 2: Nombre de columnas, 3: Orden de columnas
-    df_transactions, columns_dataframe_config, columns_order = get_transactions_by_month(selected_year, selected_month)
+    df_transactions, columns_dataframe_config, columns_order = get_transactions_by_month(USER_ID, selected_year, selected_month)
     df_show = df_transactions[columns_order]
 
     total_income, total_expense, balance = calculare_balance(df_transactions)
@@ -90,6 +110,10 @@ with st.container(border=True):
             delta=balance
         )
 
+_, col_download = st.columns([4,1])
+with col_download:
+    dwnlbtn = st.container()
+
 df_styled = (
     df_show.style
     .apply(household_expense_style, axis=1)
@@ -111,3 +135,16 @@ else:
         height = 500
     )
     st.write(":blue-background[Nota: En celeste los gastos compartidos.]")
+    df_excel = (
+        remove_timezone(df_show)
+        .rename(columns=rename_columns_df_excel())
+    )
+    excel_file = generate_excel(df_excel)
+
+    with dwnlbtn:
+        st.download_button(
+            label=":material/download: Descargar Excel",
+            data=excel_file,
+            file_name=f"Reporte_{selected_year}{selected_month:02d}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
