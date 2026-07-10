@@ -175,9 +175,6 @@ class TransactionRepository(BaseRepository):
             )
         )
 
-        #result = self.session.exec(statement_1).fetchall()
-        #return result
-
         # 2. Definir la segunda consulta (Nueva consulta con las mismas columnas)
         statement_2 = (
             select(

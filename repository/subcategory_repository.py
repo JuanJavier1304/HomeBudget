@@ -8,19 +8,6 @@ class SubcategoryRepository (BaseRepository):
     def __init__(self, session):
         super().__init__(session)
 
-    def get_subcategory_by_id(self, subcategory_id: int):
-        """
-        Listar subcategoría por id
-        :param subcategory_id: ID de la subcategoría
-        :return: subcategoría
-        """
-        statement = (
-            select(Subcategory)
-            .where(Subcategory.id == subcategory_id)
-        )
-
-        return self.session.exec(statement).first()
-
     def exists_subcategory_by_name(self, category_id: int, subcategory_name: str):
         """
         Conocer si existe subcategoría por nombre
