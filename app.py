@@ -1,5 +1,5 @@
 import streamlit as st
-from utils.login import authenticate_user
+from services.user_service import authenticate
 from models import User
 
 st.set_page_config(page_title="Home[Budget]",layout="wide")
@@ -50,7 +50,7 @@ else:
 
         if btn_ingresar:
             user_to_authenticate = User(username=username, password_hash=password)
-            auth_user = authenticate_user(user_to_authenticate)  # devuelve (id, username, password)
+            auth_user = authenticate(user_to_authenticate)  # devuelve (id, username, password)
             if auth_user is not None:
                 st.session_state.logged_in = True
                 st.session_state.user_id = auth_user[0]
