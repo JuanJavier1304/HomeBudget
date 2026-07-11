@@ -186,7 +186,7 @@ def updateTransaction(transaction_id):
     input_amount = st.number_input(
         "Monto (S/.)",
         min_value=0.0,
-        value=val_amount,
+        value=float(val_amount),
         format="%.2f",
         key="input_monto"
     )
