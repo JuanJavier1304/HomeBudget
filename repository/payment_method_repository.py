@@ -1,7 +1,6 @@
 from sqlmodel import Session, select
 from models import PaymentMethod
 from .base_repository import BaseRepository
-from utils.convert import sqlmodel_to_df
 
 class PaymentMethodRepository (BaseRepository):
 

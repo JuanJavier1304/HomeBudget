@@ -1,6 +1,5 @@
 from sqlmodel import Session, select
 from utils.convert import sqlmodel_to_df
-import streamlit as st
 
 class BaseRepository:
 

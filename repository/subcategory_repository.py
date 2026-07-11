@@ -1,4 +1,4 @@
-from sqlmodel import Session, select, func
+from sqlmodel import select, func
 from models import Subcategory
 from .base_repository import BaseRepository
 from utils.convert import sqlmodel_to_df

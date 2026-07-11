@@ -30,6 +30,7 @@ test_code.py
 # Carpetas de respaldo locales
 "archivos desfasados"/
 archivos desfasados/
+archivos_desfasados/
 
 # Logs
 *.log

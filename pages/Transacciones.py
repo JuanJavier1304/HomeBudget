@@ -3,7 +3,6 @@ import streamlit as st
 import datetime
 from decimal import Decimal
 
-from services import transaction_participant_service
 # Importamos los services
 from services.date_services import get_dates_current_month
 from services.catalog_service import CatalogService
@@ -23,7 +22,6 @@ from services.session_service import require_login, get_current_user_id
 # Útiles para el script
 require_login() ###### Autenticación ######
 USER_ID = get_current_user_id()
-#USER_ID = 1 # Modificar con la línea de arriba al final
 
 
 # --- CAPA DE SERVICIOS PARA TRANSACCIONES ---

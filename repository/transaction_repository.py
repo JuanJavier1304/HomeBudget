@@ -1,9 +1,8 @@
-from sqlmodel import Session, select
+from sqlmodel import select
 from models import Transaction, Category, Subcategory, PaymentMethod, TransactionType, TransactionVariability, TransactionParticipant, User, Transfer
 from .base_repository import BaseRepository
-from utils.convert import sqlmodel_to_df, list_to_df
+from utils.convert import list_to_df
 import datetime
-from sqlalchemy.sql.functions import concat
 from sqlalchemy.orm import aliased
 from sqlalchemy import func, select, extract, and_
 

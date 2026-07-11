@@ -1,8 +1,14 @@
 import streamlit as st
-from services.user_service import authenticate
+from services.user_service import UserService
 from models import User
+from database.connection import get_session
 
 st.set_page_config(page_title="Home[Budget]",layout="wide")
+
+def authenticate(obj):
+    with get_session() as session:
+        service = UserService(session)
+        return service.authenticate(obj)
 
 # 1. Inicializar el estado de autenticación si no existe
 if "logged_in" not in st.session_state:

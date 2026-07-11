@@ -1,7 +1,7 @@
 from sqlmodel import Session, select
 from models import TransactionParticipant
 from .base_repository import BaseRepository
-from utils.convert import sqlmodel_to_df, list_to_df
+from utils.convert import sqlmodel_to_df
 
 class TransactionParticipantRepository(BaseRepository):
 

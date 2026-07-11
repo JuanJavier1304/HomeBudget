@@ -15,8 +15,8 @@ from services.session_service import require_login, get_current_user_id
 
 
 # Útiles para el script
-USER_ID = get_current_user_id() ###### Obtener el usuario en sesión
 require_login() ###### Autenticación (si no estás en sesión, no muestra página) ######
+USER_ID = get_current_user_id() ###### Obtener el usuario en sesión
 
 
 # --- CAPA DE SERVICIOS PARA TRANSFERENCIAS ---

@@ -1,13 +1,11 @@
 from datetime import datetime, date
 from decimal import Decimal
-from typing import TYPE_CHECKING, List, Optional
+from typing import List, Optional
 from sqlmodel import Field, Relationship, SQLModel
-from sqlalchemy.orm import relationship as sa_relationship
 from sqlmodel.main import default_registry
 
 # === TRUCO PARA STREAMLIT (HOT-RELOAD) ===
-# Limpia el registro viejo de SQLAlchemy en cada recarga de página,
-# evitando el error de "failed to locate a name" y mappers duplicados.
+# Limpia el registro viejo de SQLAlchemy en cada recarga de página, evitando el error de "failed to locate a name" y mappers duplicados.
 default_registry.dispose()
 
 # ==========================================

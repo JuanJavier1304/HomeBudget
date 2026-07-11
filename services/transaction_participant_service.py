@@ -1,6 +1,6 @@
 from sqlmodel import Session
 from services.base_service import BaseService
-from repository.transaction_participant_repository import TransactionParticipantRepository # Tu repo específico
+from repository.transaction_participant_repository import TransactionParticipantRepository
 
 class TransactionParticipantService(BaseService):
     def __init__(self, session: Session):

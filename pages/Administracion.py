@@ -4,18 +4,12 @@ import streamlit as st
 from repository.category_repository import CategoryRepository
 from repository.subcategory_repository import SubcategoryRepository
 from repository.payment_method_repository import PaymentMethodRepository
-
 # Importamos models
 from models import Category, Subcategory, PaymentMethod
-
 # Importamos conexión
 from database.connection import get_session
-
 # Importamos script para autenticación
 from services.session_service import require_login
-
-import pandas as pd
-import time
 
 ######### Autenticación #########
 require_login()
