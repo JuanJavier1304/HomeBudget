@@ -464,6 +464,7 @@ if isinstance(date_range, tuple) and len(date_range) == 2:
         hide_index=True,
         height = 500
     )
+    st.write(f"{len(df_transacciones)} filas.")
 
     # Creamos los botones en el contenedor creado previamente
     with contenedor_botones:

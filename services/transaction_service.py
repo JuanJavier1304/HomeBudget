@@ -19,7 +19,36 @@ class TransactionService(BaseService):
         return data
 
     def get_shared_transactions(self):
-        return self.repo.get_shared_transactions()
+        # Muestra los gastos compartidos
+        columns_dataframe_config = {
+            "id": None,
+            "transaction_date": st.column_config.DateColumn("Fecha de Transacción", format="YYYY-MM-DD"),
+            "fullname_princ": st.column_config.Column("¿Quién pagó?"),
+            "description": st.column_config.Column("Descripción"),
+            "category_name": st.column_config.Column("Categoría"),
+            "subcategory_name": st.column_config.Column("Subcategoría"),
+            "amount": st.column_config.NumberColumn("Monto", format="S/%.2f"),
+            "fullname_sec": st.column_config.Column("Devuelve"),
+            "assigned_amount": st.column_config.NumberColumn("Monto a devolver", format="S/%.2f"),
+            "comment": st.column_config.Column("Comentario"),
+            "is_household_expense": None,
+            "id_user_princ": None,
+            "id_user_sec": None
+        }
+        columns_order = [
+            "id",
+            "transaction_date",
+            "description",
+            "category_name",
+            "subcategory_name",
+            "amount",
+            "fullname_princ",
+            "fullname_sec",
+            "assigned_amount",
+            "comment"
+        ]
+        df_transactions = self.repo.get_shared_transactions()
+        return df_transactions, columns_dataframe_config, columns_order
 
     def update_transaction_by_transfer(self, obj):
         return self.repo.update_transaction_by_transfer(obj)

@@ -162,7 +162,7 @@ class Transaction(SQLModel, table=True):
     payment_method: Optional["PaymentMethod"] = Relationship(back_populates="transactions")
     participants: List["TransactionParticipant"] = Relationship(back_populates="transaction")
     transfer: Optional["Transfer"] = Relationship(back_populates="transactions")
-    transfer_details: List["TransferDetail"] = Relationship(back_populates="transaction")
+    #transfer_details: List["TransferDetail"] = Relationship(back_populates="transaction")
     transaction_type: Optional["TransactionType"] = Relationship(back_populates="transactions")
     transaction_variability: Optional["TransactionVariability"] = Relationship(back_populates="transactions")
 
@@ -186,25 +186,25 @@ class Transfer(SQLModel, table=True):
     user_from: Optional["User"] = Relationship(sa_relationship_kwargs={"foreign_keys": "[Transfer.id_user_from]"})
     user_to: Optional["User"] = Relationship(sa_relationship_kwargs={"foreign_keys": "[Transfer.id_user_to]"})
     transactions: List["Transaction"] = Relationship(back_populates="transfer")
-    details: List["TransferDetail"] = Relationship(back_populates="transfer")
+    #details: List["TransferDetail"] = Relationship(back_populates="transfer")
 
 
 # ==========================================
 # MODELO: TRANSFER DETAIL
 # ==========================================
-class TransferDetail(SQLModel, table=True):
-    __tablename__ = "transfer_detail"
-    __table_args__ = {'extend_existing': True}
-
-    id: Optional[int] = Field(default=None, primary_key=True)
-
-    transfer_id: int = Field(foreign_key="transfer.id")
-    transaction_id: int = Field(foreign_key="transaction.id")
-    amount_applied: Optional[Decimal] = None
-
-    #Relaciones
-    transfer: Optional["Transfer"] = Relationship(back_populates="details")
-    transaction: Optional["Transaction"] = Relationship(back_populates="transfer_details")
+# class TransferDetail(SQLModel, table=True):
+#     __tablename__ = "transfer_detail"
+#     __table_args__ = {'extend_existing': True}
+# 
+#     id: Optional[int] = Field(default=None, primary_key=True)
+# 
+#     transfer_id: int = Field(foreign_key="transfer.id")
+#     transaction_id: int = Field(foreign_key="transaction.id")
+#     amount_applied: Optional[Decimal] = None
+# 
+#     #Relaciones
+#     transfer: Optional["Transfer"] = Relationship(back_populates="details")
+#     transaction: Optional["Transaction"] = Relationship(back_populates="transfer_details")
 
 
 # ==========================================

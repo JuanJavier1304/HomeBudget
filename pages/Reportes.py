@@ -108,10 +108,13 @@ with st.container(border=True):
         st.metric(
             label="⚖️ Balance Neto",
             value=f"S/{balance:,.2f}",
-            delta=balance
+            delta=f"S/{balance:,.2f}",
+            delta_color="off"
         )
 
-_, col_download = st.columns([4,1])
+col_link_transactions, col_download = st.columns([4,1])
+with col_link_transactions:
+    st.page_link("pages/Transacciones.py", label="Agregar/Editar transacciones") 
 with col_download:
     dwnlbtn = st.container()
 

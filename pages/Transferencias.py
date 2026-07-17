@@ -1,18 +1,19 @@
 # Importamos streamlit y librerías necesarias
 import streamlit as st
 import datetime
+from io import BytesIO
+from openpyxl import Workbook
 
-# Importamos los services
+# Importamos los services y script para autenticación
 from services.transaction_service import TransactionService
 from services.transfer_service import TransferService
+from services.date_services import remove_timezone
+from services.utils_services import rename_columns_df_transfer_excel
+from services.session_service import require_login, get_current_user_id
 # Importamos models
 from models import Transfer, Transaction
 # Importamos conexión
 from database.connection import get_session
-
-# Importamos script para autenticación
-from services.session_service import require_login, get_current_user_id
-
 
 # Útiles para el script
 require_login() ###### Autenticación (si no estás en sesión, no muestra página) ######
@@ -20,12 +21,17 @@ USER_ID = get_current_user_id() ###### Obtener el usuario en sesión
 
 
 # --- CAPA DE SERVICIOS PARA TRANSFERENCIAS ---
-
 @st.cache_data
 def get_shared_transactions():
     with get_session() as session:
         service = TransactionService(session)
         return service.get_shared_transactions()
+
+@st.cache_data
+def get_previously_transfer():
+    with get_session() as session:
+        service = TransferService(session)
+        return service.get_previously_transfer()
 
 @st.cache_data
 def get_household_balance():
@@ -48,6 +54,24 @@ def highlight_columns(col):
     if col.name in ("fullname_sec", "assigned_amount"):
         return ['background-color: #fff3cd; color: #856404; font-weight: bold'] * len(col)
     return [''] * len(col)
+
+def generate_excel(df):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = f"Reporte"
+
+    # Encabezados
+    ws.append(df.columns.tolist())
+
+    # Datos
+    for row in df.itertuples(index=False):
+        ws.append(row)
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return output
 
 @st.dialog("Transferencia", width="medium")
 def add_transfer_dialog(df_transactions, id_from, name_from, id_to, name_to, diff):
@@ -97,108 +121,114 @@ def add_transfer_dialog(df_transactions, id_from, name_from, id_to, name_to, dif
 
 st.set_page_config(page_title="Transferencias")
 st.title(":material/currency_exchange: Transferencias")
+tab_fix_pendings, tab_show_transfer = st.tabs(
+	[
+		"Por saldar",
+		"Saldados"
+	]
+)
 
-####### Inicializamos rango de fechas del mes actual #######
-# Creamos el contenedor para los botones Nuevo, editar y eliminar
-contenedor_botones = st.container()
-
-# Muestra los gastos compartidos
-columns_dataframe_config = {
-    "id": None,
-    "transaction_date": st.column_config.DateColumn("Fecha de Transacción", format="YYYY-MM-DD"),
-    "fullname_princ": st.column_config.Column("¿Quién pagó?"),
-    "description": st.column_config.Column("Descripción"),
-    "category_name": st.column_config.Column("Categoría"),
-    "subcategory_name": st.column_config.Column("Subcategoría"),
-    "amount": st.column_config.NumberColumn("Monto", format="S/%.2f"),
-    "fullname_sec": st.column_config.Column("Devuelve"),
-    "assigned_amount": st.column_config.NumberColumn("Monto a devolver", format="S/%.2f"),
-    "comment": st.column_config.Column("Comentario"),
-    "is_household_expense": None,
-    "id_user_princ": None,
-    "id_user_sec": None
-}
-columns_order = [
-    "id",
-    "transaction_date",
-    "description",
-    "category_name",
-    "subcategory_name",
-    "amount",
-    "fullname_princ",
-    "fullname_sec",
-    "assigned_amount",
-    "comment"
-]
-
-df_shared_transactions = get_shared_transactions()
-
-if not df_shared_transactions.empty:
-
-    balance_df = get_household_balance()
-    _="""
-    st.write(balance_df)
-    receiver = balance_df.loc[
-        balance_df["balance"].idxmax()
-    ]
-    st.write(receiver)
-
-    payer = balance_df.loc[
-        balance_df["balance"].idxmin()
-    ]
-    st.write(payer)
-    """
-
-    columns_metric = st.columns(3)
-
-
-    for idx, fila in balance_df.iterrows():
-        user_name = fila["username"]
-        user_ammount = fila["debt"]
-        with columns_metric[idx]:
-            st.metric(label=f"Total a devolver por {user_name}:", value=f"S/.{user_ammount}")
-
-    # Obtenemos quién debe más y cuánto
-    metric3_id_to = balance_df.loc[balance_df['debt'].idxmin(), 'user_id']
-    metric3_id_from = balance_df.loc[balance_df['debt'].idxmax(), 'user_id']
-    metric3_name_to = balance_df.loc[balance_df['debt'].idxmin(), 'username']
-    metric3_name_from = balance_df.loc[balance_df['debt'].idxmax(), 'username']
-    metric3_diff = abs(balance_df['debt'].iloc[0] - balance_df['debt'].iloc[1])
-    with columns_metric[(2)]:
-        st.metric(label=f"Devolver a {metric3_name_to}:", value=f"S/.{metric3_diff}", delta="Saldo a devolver")
-
+with tab_fix_pendings:
+    ####### Inicializamos rango de fechas del mes actual #######
     # Creamos el contenedor para los botones Nuevo, editar y eliminar
     contenedor_botones = st.container()
 
-    # Dataframe gastos compartidos
-    df_shared_transactions = df_shared_transactions[columns_order]
-    df_style = df_shared_transactions.style.apply(highlight_columns, axis=0)
+    # 1: DF, 2: Nombre de columnas, 3: Orden de columnas
+    df_shared_transactions, columns_dataframe_config, columns_order = get_shared_transactions()
 
-    event = st.dataframe(
-            df_style,
-            #on_select="rerun",
-            on_select="ignore",
-            #selection_mode="single-row",
-            #selection_mode="multi-row",
-            use_container_width=True,
-            column_config=columns_dataframe_config,
-            hide_index=True
-    )
+    if not df_shared_transactions.empty:
 
-    # Creamos los botones en el contenedor creado anteriormente
-    with contenedor_botones:
-        col1, col2, _ = st.columns([3, 3, 5.5])
+        balance_df = get_household_balance()
 
-        with col1:
-            #disabled_check = len(event.selection.rows) == 0
-            st.button(
-                label="Saldar pendientes",
-                icon=":material/check_circle:",
-                on_click=add_transfer_dialog,
-                args=(df_shared_transactions,metric3_id_from,metric3_name_from,metric3_id_to,metric3_name_to,metric3_diff),
-                type="primary",
+        with st.container(border=True):
+            columns_metric = st.columns(3)
+
+            # Obtenemos quién debe más y cuánto
+            metric3_id_to = balance_df.loc[balance_df['debt'].idxmin(), 'user_id']
+            metric3_id_from = balance_df.loc[balance_df['debt'].idxmax(), 'user_id']
+            metric3_name_to = balance_df.loc[balance_df['debt'].idxmin(), 'username']
+            metric3_name_from = balance_df.loc[balance_df['debt'].idxmax(), 'username']
+            metric3_diff = abs(balance_df['debt'].iloc[0] - balance_df['debt'].iloc[1])
+
+            for idx, fila in balance_df.iterrows():
+                user_name = fila["username"]
+                user_ammount = fila["debt"]
+                with columns_metric[idx]:
+                    st.metric(label=f"Total a devolver por {user_name}:", value=f"S/.{user_ammount}")
+            with columns_metric[(2)]:
+                st.metric(label=f"Devolver a {metric3_name_to}:", value=f"S/.{metric3_diff}", delta="Saldo a devolver")
+
+        # Creamos el contenedor para los boton Saldar Pendientes
+        contenedor_botones = st.container()
+
+        # Dataframe gastos compartidos
+        df_shared_transactions = df_shared_transactions[columns_order]
+        df_style = df_shared_transactions.style.apply(highlight_columns, axis=0)
+
+        event = st.dataframe(
+                df_style,
+                #on_select="rerun",
+                on_select="ignore",
+                #selection_mode="single-row",
+                #selection_mode="multi-row",
                 use_container_width=True,
-                #disabled=disabled_check
+                column_config=columns_dataframe_config,
+                hide_index=True
+        )
+        st.write(f"{len(df_shared_transactions)} filas.")
+
+        # Creamos los botones en el contenedor creado anteriormente
+        with contenedor_botones:
+            col1, col2, _ = st.columns([3, 3, 5.5])
+
+            with col1:
+                #disabled_check = len(event.selection.rows) == 0
+                st.button(
+                    label="Saldar pendientes",
+                    icon=":material/check_circle:",
+                    on_click=add_transfer_dialog,
+                    args=(df_shared_transactions,metric3_id_from,metric3_name_from,metric3_id_to,metric3_name_to,metric3_diff),
+                    type="primary",
+                    use_container_width=True,
+                    #disabled=disabled_check
+                )
+    else:
+        st.info("No hay gastos compartidos por saldar")
+with tab_show_transfer:
+
+    # 1: DF, 2: Nombre de columnas, 3: Orden de columnas
+    df_show_transfer, columns_df_config_show_transfer, columns_order_show_transfer = get_previously_transfer()
+    df_show_transfer = df_show_transfer[columns_order_show_transfer]
+    df_transfer_styled = df_show_transfer.style.set_properties(subset=["amount_transfer"],**{"font-weight": "bold"})
+    
+    # Mostrar el detalle
+    if df_show_transfer.empty:
+        st.info("No hay información para mostrar")
+    else:
+        #Se reserva espacio para el botón de descarga en Excel
+        col_subtitle, col_download = st.columns([4,1])
+        with col_subtitle:
+            st.subheader("Historial")
+        with col_download:
+            btn_dwnl_xls_transfer = st.container()
+        st.dataframe(
+            df_transfer_styled,
+            column_config=columns_df_config_show_transfer,
+            use_container_width=True,
+            #height = 500
+        )
+        st.write(f"{len(df_show_transfer)} filas.")
+        df_excel = (
+            remove_timezone(df_show_transfer)
+            .rename(columns=rename_columns_df_transfer_excel())
+        )
+        excel_file = generate_excel(df_excel)
+
+        with btn_dwnl_xls_transfer:
+            st.download_button(
+                label=":material/download: Descargar Excel",
+                data=excel_file,
+                file_name=f"Reporte_Transferencias.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
-else:
-    st.info("No hay gastos compartidos por saldar")
+

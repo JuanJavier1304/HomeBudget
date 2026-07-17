@@ -61,7 +61,7 @@ else:
                 st.session_state.logged_in = True
                 st.session_state.user_id = auth_user[0]
                 st.session_state.firstname = auth_user[1]
-                # st.switch_page("pages/Transacciones.py")
+                st.switch_page("pages/Reportes.py")
                 st.rerun()
             else:
                 st.error("Usuario o contraseña incorrectos")
