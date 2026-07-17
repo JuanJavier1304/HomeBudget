@@ -78,6 +78,7 @@ class TransactionService(BaseService):
             "comment": st.column_config.Column("Comentario"),
             "is_shared": st.column_config.Column("Es compartido"),
             "is_household_expense": st.column_config.Column("Es gasto de hogar"),
+            "date_interval_name": st.column_config.Column("Intervalo")
         }
         columns_order = [
             "transaction_date",
@@ -90,7 +91,8 @@ class TransactionService(BaseService):
             "transaction_variability_name",
             "comment",
             "is_shared",
-            "is_household_expense"
+            "is_household_expense",
+            "date_interval_name"
         ]
         df = pd.DataFrame([row._mapping for row in data])
         return df, columns_dataframe_config, columns_order

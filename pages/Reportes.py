@@ -10,6 +10,7 @@ from services.transaction_service import TransactionService
 from services.date_services import get_current_date_YYYYMM, remove_timezone
 from services.utils_services import rename_columns_df_excel
 
+
 # Útiles para el script
 st.set_page_config(page_title="Reporte Mensual", layout="wide")
 require_login() ###### Autenticación (si no estás en sesión, no muestra página) ######
@@ -134,6 +135,7 @@ else:
         use_container_width=True,
         height = 500
     )
+    st.write(f"{len(df_show)} filas.")
     st.write(":blue-background[Nota: En celeste los gastos compartidos.]")
     df_excel = (
         remove_timezone(df_show)

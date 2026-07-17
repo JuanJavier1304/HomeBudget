@@ -206,6 +206,23 @@ class TransferDetail(SQLModel, table=True):
     transfer: Optional["Transfer"] = Relationship(back_populates="details")
     transaction: Optional["Transaction"] = Relationship(back_populates="transfer_details")
 
+
+# ==========================================
+# MODELO: DATE_INTERVAL
+# ==========================================
+class DateInterval(SQLModel, table=True):
+    __tablename__ = "date_interval"
+    __table_args__ = {'extend_existing': True}
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    name: str = Field(max_length=100)
+    start_date: date
+    end_date: date
+    is_active: bool = Field(default=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    
+
 try:
     User.model_rebuild()
     TransactionParticipant.model_rebuild()

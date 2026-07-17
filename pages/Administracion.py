@@ -1,15 +1,18 @@
 import streamlit as st
+from datetime import date, datetime, timedelta
 
 # Importamos repositorios
 from repository.category_repository import CategoryRepository
 from repository.subcategory_repository import SubcategoryRepository
 from repository.payment_method_repository import PaymentMethodRepository
 # Importamos models
-from models import Category, Subcategory, PaymentMethod
+from models import Category, Subcategory, PaymentMethod, DateInterval
 # Importamos conexión
 from database.connection import get_session
 # Importamos script para autenticación
 from services.session_service import require_login
+from services.date_interval_service import DateIntervalService
+import services.date_services as dt_services
 
 ######### Autenticación #########
 require_login()
@@ -19,6 +22,21 @@ st.title(":material/settings: Administración")
 
 # Útiles para el script
 session = get_session()
+
+def get_last_end_date_from_interval():
+    with get_session() as session:
+        service = DateIntervalService(session)
+        return service.get_last_end_date_from_interval()
+
+def insert_date_interval(obj):
+    with get_session() as session:
+        service = DateIntervalService(session)
+        return service.update(obj)
+		
+def get_all_date_interval():
+    with get_session() as session:
+        service = DateIntervalService(session)
+        return service.get_all()
 
 def formatear_input(input_name):
 	return input_name.strip().title()
@@ -177,11 +195,12 @@ def delete_payment_method(payment_method_repo:PaymentMethod, payment_method_id:i
 			st.rerun()
 
 
-tab_category, tab_subcategory, tab_payment_method = st.tabs(
+tab_category, tab_subcategory, tab_payment_method, tab_dates_interval = st.tabs(
 	[
 		"Categorías",
 		"Subcategorías",
-		"Métodos de pago"
+		"Métodos de pago",
+		"Periodos"
 	]
 )
 
@@ -328,4 +347,50 @@ with tab_payment_method:
 				type="primary"
 			)
 
+with tab_dates_interval:
+	last_day_bd = get_last_end_date_from_interval()
 
+	# Regla UX: La nueva fecha de inicio sugerida es el día siguiente al último cierre
+	init_date = last_day_bd + timedelta(days=1)
+
+	# 2. Selector de Rango de Fechas Integrado
+	rango_fechas = st.date_input(
+		"Selecciona el rango del periodo:",
+		value=(init_date, init_date + timedelta(days=30)), # Fechas por defecto en el form
+		min_value=date(2026, 1, 1),
+		format="DD/MM/YYYY"
+	)
+
+	disabled_btn_date_interval = True
+	type_btn_date_interval = "secondary"
+	# 3. Validación Reactiva en Pantalla
+	if isinstance(rango_fechas, tuple) and len(rango_fechas) == 2:
+		start_date, end_date = rango_fechas
+		
+		# Validar contra el último registro para evitar solapamientos en Frontend
+		if start_date <= last_day_bd:
+			st.error(f":material/error: Error: La fecha de inicio ({start_date.strftime('%d/%m/%Y')}) se solapa con el periodo anterior que terminó el {last_day_bd.strftime('%d/%m/%Y')}.")
+			disabled_btn_date_interval = True
+			type_btn_date_interval = "secondary"
+		else:
+			st.success(f":material/check: Rango válido: {start_date.strftime('%d/%m/%Y')} al {end_date.strftime('%d/%m/%Y')} (Total: {(end_date - start_date).days + 1} días)")
+			disabled_btn_date_interval = False
+			type_btn_date_interval = "primary"
+	else:
+		st.info("💡 Por favor, selecciona ambas fechas (Inicio y Fin) en el calendario.")
+
+	date_interval_btn = st.button("💾 Guardar Intervalo", disabled=disabled_btn_date_interval, type=type_btn_date_interval, width="stretch")
+	# El botón solo se activa si pasa la regla de negocio
+	if date_interval_btn:
+		periodName = dt_services.getPeriodName(start_date, end_date)
+		new_date_interval = DateInterval(start_date=start_date, end_date=end_date, name=periodName)
+		insert_date_interval(new_date_interval)
+		st.toast(":material/save: Intervalo guardado con éxito")
+		st.rerun()
+
+	st.divider()
+	st.subheader("Historial de Intervalos")
+
+	df_date_intervals, columns_dataframe_config, columns_order = get_all_date_interval()
+	df_show = df_date_intervals[columns_order]
+	st.dataframe(df_show, column_config=columns_dataframe_config, use_container_width=True, hide_index = True)

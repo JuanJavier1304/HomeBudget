@@ -1,6 +1,7 @@
 import datetime
 import calendar
 import pandas as pd
+from repository.date_interval_repository import DateIntervalRepository
 
 def get_dates_current_month():
     """
@@ -56,4 +57,20 @@ def remove_timezone(df):
 
     return df
 
+
+
+def getPeriodName(start_date, end_date):
+    """
+    Devuelve el nombre del período en formato MMMAAA-MMMAAA.
+    """
+    meses = {1: 'ENE', 2: 'FEB', 3: 'MAR', 4: 'ABR', 5: 'MAY', 6: 'JUN',
+            7: 'JUL', 8: 'AGO', 9: 'SEP', 10: 'OCT', 11: 'NOV', 12: 'DIC'}
+    
+    # Formatear fecha inicio
+    init_part = f"{meses[start_date.month]}{start_date.strftime('%Y')}"
+    
+    # Formatear fecha fin
+    end_part = f"{meses[end_date.month]}{end_date.strftime('%Y')}"
+    
+    return f"{init_part} - {end_part}"
 

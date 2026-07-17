@@ -11,7 +11,7 @@ from services.transaction_service import TransactionService
 from services.transaction_participant_service import TransactionParticipantService
 
 # Importamos models
-from models import Category, Subcategory, PaymentMethod, TransactionType, TransactionVariability, Transaction, TransactionParticipant
+from models import Category, Subcategory, PaymentMethod, TransactionType, TransactionVariability, Transaction, TransactionParticipant, DateInterval
 # Importamos conexión
 from database.connection import get_session
 
@@ -79,7 +79,8 @@ def load_catalog(model_name: str):
         "subcategory": (Subcategory, "sub_repo"),
         "payment_method": (PaymentMethod, "pay_repo"),
         "transaction_type": (TransactionType, "type_repo"),
-        "transaction_variability": (TransactionVariability, "var_repo")
+        "transaction_variability": (TransactionVariability, "var_repo"),
+        "date_interval": (DateInterval, "dt_interval_repo")
     }
 
     if model_name not in catalog_map:
@@ -98,6 +99,7 @@ df_categories = load_catalog("category")
 df_subcategories = load_catalog("subcategory")
 df_payment_method = load_catalog("payment_method")
 df_transaction_variability = load_catalog("transaction_variability")
+df_date_interval = load_catalog("date_interval")
 
 #### Pop ups transaccion ########################
 @st.dialog("Transacción", width="medium")

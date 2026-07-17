@@ -1,5 +1,5 @@
 from sqlmodel import select
-from models import Transaction, Category, Subcategory, PaymentMethod, TransactionType, TransactionVariability, TransactionParticipant, User, Transfer
+from models import Transaction, Category, Subcategory, PaymentMethod, TransactionType, TransactionVariability, TransactionParticipant, User, Transfer, DateInterval
 from .base_repository import BaseRepository
 from utils.convert import list_to_df
 import datetime
@@ -160,13 +160,20 @@ class TransactionRepository(BaseRepository):
                 Transaction.comment,
                 Transaction.is_shared,
                 Transaction.is_household_expense,
-                func.coalesce(Transaction.real_amount, Transaction.amount).label("final_amount")
+                func.coalesce(Transaction.real_amount, Transaction.amount).label("final_amount"),
+                DateInterval.name.label("date_interval_name")
             )
             .outerjoin(Category, Transaction.category_id == Category.id)
             .outerjoin(Subcategory, Transaction.subcategory_id == Subcategory.id)
             .outerjoin(PaymentMethod, Transaction.payment_method_id == PaymentMethod.id)
             .outerjoin(TransactionType, Transaction.transaction_type_id == TransactionType.id)
             .outerjoin(TransactionVariability, Transaction.transaction_variability_id == TransactionVariability.id)
+            .outerjoin(DateInterval, 
+                and_(
+                        Transaction.transaction_date >= DateInterval.start_date,
+                        Transaction.transaction_date <= DateInterval.end_date,
+                    )
+            )
             .where(
                 Transaction.user_id == user_id,
                 extract('year', Transaction.transaction_date) == year,
@@ -195,7 +202,8 @@ class TransactionRepository(BaseRepository):
                 Transaction.comment,
                 Transaction.is_shared,
                 Transaction.is_household_expense,
-                func.coalesce(TransactionParticipant.assigned_amount, Transaction.amount).label("final_amount")
+                func.coalesce(TransactionParticipant.assigned_amount, Transaction.amount).label("final_amount"),
+                DateInterval.name.label("date_interval_name")
             )
             .join(Transfer, Transfer.id == Transaction.transfer_id)
             .outerjoin(
@@ -211,7 +219,13 @@ class TransactionRepository(BaseRepository):
             .outerjoin(PaymentMethod, Transaction.payment_method_id == PaymentMethod.id)
             .outerjoin(TransactionType, Transaction.transaction_type_id == TransactionType.id)
             .outerjoin(TransactionVariability, Transaction.transaction_variability_id == TransactionVariability.id)
-            # Condición de tu nueva consulta
+            .outerjoin(DateInterval, 
+                and_(
+                        Transaction.transaction_date >= DateInterval.start_date,
+                        Transaction.transaction_date <= DateInterval.end_date,
+                    )
+            )
+            # Condición de la nueva consulta
             .where(
                 Transaction.user_id != user_id,
                 extract('year', Transaction.transaction_date) == year,
