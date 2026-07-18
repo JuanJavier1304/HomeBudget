@@ -20,7 +20,11 @@ DATABASE_URL = (
 
 engine = create_engine(
     DATABASE_URL,
-    echo=False
+    echo=False,
+    pool_pre_ping=True,    # Prueba la conexión antes de usarla; si Neon dormía, la reconecta automáticamente
+    pool_recycle=60,       # Recicla las conexiones cada 60 segundos para evitar que queden obsoletas
+    pool_size=5,           # Mantiene un grupo pequeño y eficiente de conexiones para Streamlit
+    max_overflow=10        # Permite conexiones extra temporales si hay picos de tráfico
 )
 
 def get_session():
