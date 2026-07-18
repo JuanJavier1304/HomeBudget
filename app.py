@@ -19,7 +19,7 @@ if "logged_in" not in st.session_state:
 page_login = st.Page("app.py", title="Login", icon=":material/login:")
 page_transacciones = st.Page("pages/Transacciones.py", title="Transacciones ", icon=":material/payments:")
 page_tranferencias = st.Page("pages/Transferencias.py", title="Transferencias ", icon=":material/currency_exchange:")
-page_cuentas_x_cobrar = st.Page("pages/CuentasXCobrar.py", title="Cuentas por Cobrar ", icon=":material/credit_card_clock:")
+# page_cuentas_x_cobrar = st.Page("pages/CuentasXCobrar.py", title="Cuentas por Cobrar ", icon=":material/credit_card_clock:")
 page_reportes = st.Page("pages/Reportes.py", title="Reportes", icon=":material/analytics:")
 page_administracion = st.Page("pages/Administracion.py", title="Administración", icon=":material/settings:")
 
@@ -27,7 +27,7 @@ page_administracion = st.Page("pages/Administracion.py", title="Administración"
 if st.session_state.logged_in:
     # Crea títulos de sección automáticos con separadores integrados
     pg = st.navigation({
-        "Operaciones": [page_transacciones, page_tranferencias, page_cuentas_x_cobrar],
+        "Operaciones": [page_transacciones, page_tranferencias],
         "Analytics": [page_reportes],
         "Administración": [page_administracion]
     }, position="sidebar")
