@@ -50,8 +50,6 @@ class UserRepository(BaseRepository):
                 User.id != user_id
             )
         )
-
-        result = self.session.exec(statement)
-        columns_names = list(result.keys())
-        df = list_to_df(result, columns_names)
-        return df
+        column_names = list(statement.selected_columns.keys())
+        results = self.session.exec(statement).fetchall()
+        return results, column_names

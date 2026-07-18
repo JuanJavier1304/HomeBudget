@@ -24,10 +24,8 @@ class TransactionParticipantRepository(BaseRepository):
                 TransactionParticipant.user_id != user_id_princ
             )
         )
-
         result = self.session.exec(statement).first()
         return sqlmodel_to_df(result)
-
 
     def updateFromTransaction(self, obj):
 

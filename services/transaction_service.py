@@ -11,11 +11,25 @@ class TransactionService(BaseService):
         self.repo = TransactionRepository(self.session)
 
     def get_by_date_range(self, user_id: int, start_date, end_date):
-        return self.repo.get_transactions_by_date_range(user_id, start_date, end_date)
+        columns_dataframe_config = {
+            "id": st.column_config.Column("ID", help="Identificador único"),
+            "transaction_date": st.column_config.DateColumn("Fecha de Transacción"),
+            "transaction_type_name": st.column_config.Column("Tipo Transacción"),
+            "description": st.column_config.Column("Descripción"),
+            "category_name": st.column_config.Column("Categoría"),
+            "subcategory_name": st.column_config.Column("Subcategoría"),
+            "amount": st.column_config.NumberColumn("Monto", format="S/%.2f"),  # Formatea como dinero si aplica
+            "payment_method_name": st.column_config.Column("Método Pago"),
+            "transaction_variability_name": st.column_config.Column("Fijo/Variable"),
+            "comment": st.column_config.Column("Comentario"),
+            "is_household_expense": st.column_config.Column("Es gasto de hogar"),
+        }
+        data, columns_names = self.repo.get_transactions_by_date_range(user_id, start_date, end_date)
+        df = pd.DataFrame(data, columns=columns_names)
+        return df, columns_dataframe_config
 
     def get_by_id(self, user_id: int, transaction_id: int):
         data = self.repo.get_transaction_by_id(user_id, transaction_id)
-        #return pd.DataFrame()  # Retorna DataFrame vacío si no hay resultados
         return data
 
     def get_shared_transactions(self):
@@ -105,7 +119,6 @@ class TransactionService(BaseService):
             "transaction_variability_id": None,
             "transaction_variability_name": st.column_config.Column("Fijo/Variable"),
             "comment": st.column_config.Column("Comentario"),
-            "is_shared": st.column_config.Column("Es compartido"),
             "is_household_expense": st.column_config.Column("Es gasto de hogar"),
             "date_interval_name": st.column_config.Column("Intervalo")
         }
@@ -119,7 +132,6 @@ class TransactionService(BaseService):
             "payment_method_name",
             "transaction_variability_name",
             "comment",
-            "is_shared",
             "is_household_expense",
             "date_interval_name"
         ]

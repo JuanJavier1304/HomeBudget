@@ -32,7 +32,6 @@ class TransactionRepository(BaseRepository):
                 PaymentMethod.name.label("payment_method_name"),
                 TransactionVariability.name.label("transaction_variability_name"),
                 Transaction.comment,
-                Transaction.is_shared,
                 Transaction.is_household_expense
         )
     		.outerjoin(Category, Transaction.category_id == Category.id)
@@ -46,13 +45,9 @@ class TransactionRepository(BaseRepository):
 			)
             .order_by(Transaction.transaction_date.asc(), Transaction.id)
         )
-
-        # Sin all()
-        result = self.session.exec(statement)
-        columns_names = list(result.keys())
-        df = list_to_df(result, columns_names)
-
-        return df
+        column_names = list(statement.selected_columns.keys())
+        results = self.session.exec(statement).fetchall()
+        return results, column_names
 
     def get_transaction_by_id(self, user_id: int, transaction_id: int):
         """
@@ -69,8 +64,6 @@ class TransactionRepository(BaseRepository):
                 Transaction.user_id == user_id
             )
         )
-
-        # Sin all()
         result = self.session.exec(statement).first()
         return result
 
@@ -111,19 +104,14 @@ class TransactionRepository(BaseRepository):
     		.outerjoin(User_1, Transaction.user_id == User_1.id)
             .outerjoin(User_2, TransactionParticipant.user_id == User_2.id)
             .where(
-                #Transaction.user_id == user_id,
-                #Transaction.is_shared == True
                 Transaction.is_household_expense == True,
                 Transaction.transfer_id == None
             )
             .order_by(Transaction.transaction_date.asc())
         )
-
-        result = self.session.exec(statement)
-        columns_names = list(result.keys())
-        df = list_to_df(result, columns_names)
-
-        return df
+        column_names = list(statement.selected_columns.keys())
+        results = self.session.exec(statement).fetchall()
+        return results, column_names
 
     def update_transaction_by_transfer(self, obj):
         merged_obj = self.session.get(Transaction, obj.id)
@@ -136,7 +124,6 @@ class TransactionRepository(BaseRepository):
         self.session.refresh(merged_obj)
 
         return merged_obj
-
 
     ############ PARA DASHBOARD ############
     def get_transactions_by_month(self, user_id: int, year: int, month: int):
@@ -158,7 +145,6 @@ class TransactionRepository(BaseRepository):
                 Transaction.transaction_variability_id,
                 TransactionVariability.name.label("transaction_variability_name"),
                 Transaction.comment,
-                Transaction.is_shared,
                 Transaction.is_household_expense,
                 func.coalesce(Transaction.real_amount, Transaction.amount).label("final_amount"),
                 DateInterval.name.label("date_interval_name")
@@ -200,7 +186,6 @@ class TransactionRepository(BaseRepository):
                 Transaction.transaction_variability_id,
                 TransactionVariability.name.label("transaction_variability_name"),
                 Transaction.comment,
-                Transaction.is_shared,
                 Transaction.is_household_expense,
                 func.coalesce(TransactionParticipant.assigned_amount, Transaction.amount).label("final_amount"),
                 DateInterval.name.label("date_interval_name")

@@ -57,6 +57,7 @@ class PaymentMethod(SQLModel, table=True):
 
     # Relaciones
     transactions: List["Transaction"] = Relationship(back_populates="payment_method")
+    account_receivable: List["AccountReceivable"] = Relationship(back_populates="payment_method")
 
 
 # ==========================================
@@ -71,6 +72,7 @@ class TransactionType(SQLModel, table=True):
 
     # Relaciones
     transactions: List["Transaction"] = Relationship(back_populates="transaction_type")
+    account_receivable: List["AccountReceivable"] = Relationship(back_populates="transaction_type")
 
 
 # ==========================================
@@ -114,6 +116,7 @@ class User(SQLModel, table=True):
         sa_relationship_kwargs={"foreign_keys": "[Transfer.id_user_to]"},
         back_populates="user_to"
     )
+    account_holder: List["AccountHolder"] = Relationship(back_populates="user")
 
 # ==========================================
 # MODELO: TRANSACTION PARTICIPANT
@@ -150,7 +153,6 @@ class Transaction(SQLModel, table=True):
     payment_method_id: int = Field(foreign_key="payment_method.id")
     transaction_variability_id: int = Field(foreign_key="transaction_variability.id")
     comment: Optional[str] = Field(default=None, max_length=150)
-    is_shared: Optional[bool] = None
     is_household_expense: Optional[bool] = None
     transfer_id: Optional[int] = Field(default=None, foreign_key="transfer.id")
     real_amount: Decimal
@@ -222,6 +224,45 @@ class DateInterval(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
+# ==========================================
+# MODELO: ACCOUNT_HOLDER
+# ==========================================
+class AccountHolder(SQLModel, table=True):
+    __tablename__ = "account_holder"
+    __table_args__ = {'extend_existing': True}
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id")
+    firstname: str = Field(max_length=50)
+    lastname: str = Field(max_length=50)
+    relationship: str = Field(max_length=50)
+    is_enabled: Optional[bool] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+    # Relaciones
+    user: Optional["User"] = Relationship(back_populates="account_holder")
+    account_receivable: Optional["AccountReceivable"] = Relationship(back_populates="account_holder")
+    
+# ==========================================
+# MODELO: ACCOUNT_RECEIVABLE
+# ==========================================
+class AccountReceivable(SQLModel, table=True):
+    __tablename__ = "account_receivable"
+    __table_args__ = {'extend_existing': True}
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    account_holder_id: int = Field(foreign_key="account_holder.id")
+    date_created: datetime = Field(default_factory=datetime.utcnow)
+    transaction_date: date
+    description: str = Field(max_length=100)
+    payment_method_id: int = Field(foreign_key="payment_method.id")
+    transaction_type_id: int = Field(foreign_key="transaction_type.id")
+    is_enabled: Optional[bool] = None
+
+    # Relaciones
+    account_holder: Optional["AccountHolder"] = Relationship(back_populates="account_receivable")
+    payment_method: List["PaymentMethod"] = Relationship(back_populates="account_receivable")
+    transaction_type: List["TransactionType"] = Relationship(back_populates="account_receivable")
 
 try:
     User.model_rebuild()

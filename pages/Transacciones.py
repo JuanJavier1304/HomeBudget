@@ -18,14 +18,11 @@ from database.connection import get_session
 # Importamos script para autenticación
 from services.session_service import require_login, get_current_user_id
 
-
 # Útiles para el script
 require_login() ###### Autenticación ######
 USER_ID = get_current_user_id()
 
-
 # --- CAPA DE SERVICIOS PARA TRANSACCIONES ---
-
 @st.cache_data
 def get_transactions_by_date_range(user_id, start_date, end_date):
     with get_session() as session:
@@ -114,7 +111,6 @@ def updateTransaction(transaction_id):
     val_subcategory_id=None # Este se configura luego de seleccionar categoría
     val_payment_method_id=int(df_payment_method['id'].iloc[0])
     val_variability=int(df_transaction_variability['id'].iloc[0])
-    val_is_shared=False
     val_is_household_expense=False
     val_comment=None
     val_amount_participant = 0.0
@@ -131,23 +127,8 @@ def updateTransaction(transaction_id):
         val_subcategory_id = current_transaction.subcategory_id
         val_payment_method_id = current_transaction.payment_method_id
         val_variability = current_transaction.transaction_variability_id
-        val_is_shared = current_transaction.is_shared
         val_is_household_expense = current_transaction.is_household_expense
         val_comment = current_transaction.comment
-
-        _="""
-        val_date = current_transaction.iloc[0]["transaction_date"]
-        val_transaction_type = current_transaction.iloc[0]["transaction_type_id"]
-        val_description = current_transaction.iloc[0]["description"]
-        val_amount = float(current_transaction.iloc[0]["amount"])
-        val_category_id = current_transaction.iloc[0]["category_id"]
-        val_subcategory_id = current_transaction.iloc[0]["subcategory_id"]
-        val_payment_method_id = current_transaction.iloc[0]["payment_method_id"]
-        val_variability = current_transaction.iloc[0]["transaction_variability_id"]
-        val_is_shared = current_transaction.iloc[0]["is_shared"]
-        val_is_household_expense = current_transaction.iloc[0]["is_household_expense"]
-        val_comment = current_transaction.iloc[0]["comment"]
-        """
     else:
         transaction_id = None
 
@@ -269,21 +250,12 @@ def updateTransaction(transaction_id):
 
     fila_6_col_1, fila_6_col_2 = st.columns(2)
     with fila_6_col_1:
-        # Fila 6: Checkbox es gasto compartido
-        input_chk_is_shared = st.checkbox(
-            label="¿Es gasto compartido?",
-            key="chkbx_gasto_compartido",
-            value=val_is_shared
-        )
-    with fila_6_col_2:
         # Fila 6: Checkbox es gasto de hogar
-        input_chk_is_household_expense = False
-        if input_chk_is_shared:
-            input_chk_is_household_expense = st.checkbox(
-                label="¿Es gasto del hogar?",
-                key="user_subscription",
-                value=val_is_household_expense
-            )
+        input_chk_is_household_expense = st.checkbox(
+            label="¿Es gasto del hogar?",
+            key="user_subscription",
+            value=val_is_household_expense
+        )
 
     fila_7_col_1, fila_7_col_2 = st.columns(2)
     if input_chk_is_household_expense:
@@ -319,13 +291,12 @@ def updateTransaction(transaction_id):
             st.caption(f"Monto ingresado: S/. {input_amount_participant:.2f}")
             input_amount_current_user = input_amount - input_amount_participant
 
-
-
     # Fila 8: Input comentario
     input_comment = st.text_area(
         "Comentario",
         key="input_comentario",
-        value=val_comment
+        value=val_comment,
+        max_chars=150
     )
 
     # Botón para guardar/actualizar transacción
@@ -367,7 +338,6 @@ def updateTransaction(transaction_id):
                 payment_method_id=input_payment_method_id,
                 transaction_variability_id=input_transaction_variability,
                 comment=input_comment,
-                is_shared=input_chk_is_shared,
                 is_household_expense=input_chk_is_household_expense
             )
             try:
@@ -433,24 +403,10 @@ contenedor_botones = st.container()
 # Muestra los gastos según el rango de fechas
 df_transacciones = None
 selected = None
-columns_dataframe_config = {
-    "id": st.column_config.Column("ID", help="Identificador único"),
-    "transaction_date": st.column_config.DateColumn("Fecha de Transacción"),
-    "transaction_type_name": st.column_config.Column("Tipo Transacción"),
-    "description": st.column_config.Column("Descripción"),
-    "category_name": st.column_config.Column("Categoría"),
-    "subcategory_name": st.column_config.Column("Subcategoría"),
-    "amount": st.column_config.NumberColumn("Monto", format="S/%.2f"),  # Formatea como dinero si aplica
-    "payment_method_name": st.column_config.Column("Método Pago"),
-    "transaction_variability_name": st.column_config.Column("Fijo/Variable"),
-    "comment": st.column_config.Column("Comentario"),
-    "is_shared": st.column_config.Column("Es compartido"),
-    "is_household_expense": st.column_config.Column("Es gasto de hogar"),
-}
 
 if isinstance(date_range, tuple) and len(date_range) == 2:
     start_date, end_date = date_range
-    df_transacciones=get_transactions_by_date_range(
+    df_transacciones, columns_dataframe_config = get_transactions_by_date_range(
         user_id = USER_ID,
         start_date = start_date,
         end_date = end_date
@@ -461,8 +417,7 @@ if isinstance(date_range, tuple) and len(date_range) == 2:
         selection_mode="single-row",
         use_container_width=True,
         column_config=columns_dataframe_config,
-        hide_index=True,
-        height = 500
+        hide_index=True
     )
     st.write(f"{len(df_transacciones)} filas.")
 
@@ -477,6 +432,7 @@ if isinstance(date_range, tuple) and len(date_range) == 2:
                 on_click=updateTransaction,
                 args=(None,),
                 type="primary",
+                disabled=False if len(selected.selection.rows) <= 0 else True,
                 use_container_width=True
             )
 
