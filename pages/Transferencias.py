@@ -1,9 +1,9 @@
 # Importamos streamlit y librerías necesarias
 import streamlit as st
 import datetime
+from decimal import Decimal
 from io import BytesIO
 from openpyxl import Workbook
-
 # Importamos los services y script para autenticación
 from services.transaction_service import TransactionService
 from services.transfer_service import TransferService
@@ -19,7 +19,6 @@ from database.connection import get_session
 require_login() ###### Autenticación (si no estás en sesión, no muestra página) ######
 USER_ID = get_current_user_id() ###### Obtener el usuario en sesión
 
-
 # --- CAPA DE SERVICIOS PARA TRANSFERENCIAS ---
 @st.cache_data
 def get_shared_transactions():
@@ -34,10 +33,10 @@ def get_previously_transfer():
         return service.get_previously_transfer()
 
 @st.cache_data
-def get_household_balance():
+def get_household_balance(df):
     with get_session() as session:
         service = TransactionService(session)
-        return service.get_household_balance()
+        return service.get_household_balance(df)
 
 def insert_transfer(transfer):
     with get_session() as session:
@@ -76,7 +75,6 @@ def generate_excel(df):
 @st.dialog("Transferencia", width="medium")
 def add_transfer_dialog(df_transactions, id_from, name_from, id_to, name_to, diff):
     today = datetime.date.today()
-    st.write()
     st.info(f"## :material/money_bag: Se saldará el monto de S/: `{diff:.2f}`\n"
         f"### :material/person: De: **{name_from}**\n"
         f"### :material/person: Hacia: **{name_to}**\n"
@@ -85,7 +83,8 @@ def add_transfer_dialog(df_transactions, id_from, name_from, id_to, name_to, dif
 
     input_comment = st.text_area(
         "Comentario",
-        key="input_comentario"
+        key="input_comentario",
+        max_chars=150
     )
 
     save_transfer = st.button(
@@ -97,9 +96,9 @@ def add_transfer_dialog(df_transactions, id_from, name_from, id_to, name_to, dif
     if save_transfer:
         today = datetime.date.today()
         transfer_to_insert = Transfer(
-            id_user_from=id_from,
-            id_user_to=id_to,
-            amount_transfer=diff,
+            id_user_from=int(id_from),
+            id_user_to=int(id_to),
+            amount_transfer=Decimal(diff),
             date_transfer=today,
             comment=input_comment
         )
@@ -129,18 +128,39 @@ tab_fix_pendings, tab_show_transfer = st.tabs(
 )
 
 with tab_fix_pendings:
-    ####### Inicializamos rango de fechas del mes actual #######
-    # Creamos el contenedor para los botones Nuevo, editar y eliminar
-    contenedor_botones = st.container()
-
     # 1: DF, 2: Nombre de columnas, 3: Orden de columnas
     df_shared_transactions, columns_dataframe_config, columns_order = get_shared_transactions()
 
     if not df_shared_transactions.empty:
+        # Dataframe gastos compartidos
+        df_shared_transactions = df_shared_transactions[columns_order]
+        df_style = df_shared_transactions.style.apply(highlight_columns, axis=0)
 
-        balance_df = get_household_balance()
+        container_metricas = st.container(border=True)
+        # Creamos el contenedor para los boton Saldar Pendientes
+        contenedor_botones = st.container()
 
-        with st.container(border=True):
+        event = st.dataframe(
+                df_style,
+                on_select="rerun",
+                #on_select="ignore",
+                #selection_mode="single-row",
+                selection_mode="multi-row",
+                use_container_width=True,
+                column_config=columns_dataframe_config,
+                hide_index=True
+        )
+        st.write(f"{len(df_shared_transactions)} filas.")
+
+        with container_metricas:
+            selected_rows = event.selection.rows
+            if selected_rows:
+                # Hacemos el balance inicial
+                df_filtrado = df_shared_transactions.iloc[selected_rows]
+            else:
+                df_filtrado = df_shared_transactions
+            
+            balance_df = get_household_balance(df_filtrado)
             columns_metric = st.columns(3)
 
             # Obtenemos quién debe más y cuánto
@@ -158,25 +178,6 @@ with tab_fix_pendings:
             with columns_metric[(2)]:
                 st.metric(label=f"Devolver a {metric3_name_to}:", value=f"S/.{metric3_diff}", delta="Saldo a devolver")
 
-        # Creamos el contenedor para los boton Saldar Pendientes
-        contenedor_botones = st.container()
-
-        # Dataframe gastos compartidos
-        df_shared_transactions = df_shared_transactions[columns_order]
-        df_style = df_shared_transactions.style.apply(highlight_columns, axis=0)
-
-        event = st.dataframe(
-                df_style,
-                #on_select="rerun",
-                on_select="ignore",
-                #selection_mode="single-row",
-                #selection_mode="multi-row",
-                use_container_width=True,
-                column_config=columns_dataframe_config,
-                hide_index=True
-        )
-        st.write(f"{len(df_shared_transactions)} filas.")
-
         # Creamos los botones en el contenedor creado anteriormente
         with contenedor_botones:
             col1, col2, _ = st.columns([3, 3, 5.5])
@@ -187,7 +188,7 @@ with tab_fix_pendings:
                     label="Saldar pendientes",
                     icon=":material/check_circle:",
                     on_click=add_transfer_dialog,
-                    args=(df_shared_transactions,metric3_id_from,metric3_name_from,metric3_id_to,metric3_name_to,metric3_diff),
+                    args=(df_filtrado,metric3_id_from,metric3_name_from,metric3_id_to,metric3_name_to,metric3_diff),
                     type="primary",
                     use_container_width=True,
                     #disabled=disabled_check

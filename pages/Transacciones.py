@@ -395,7 +395,6 @@ date_range = st.date_input(
     value=(first_day, last_day),
     key="date_selector_transactions",
 )
-############################################################
 
 # Creamos el contenedor para los botones Nuevo, editar y eliminar
 contenedor_botones = st.container()

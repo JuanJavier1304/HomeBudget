@@ -59,16 +59,20 @@ class TransactionService(BaseService):
             "fullname_princ",
             "fullname_sec",
             "assigned_amount",
-            "comment"
+            "comment",
+            "id_user_princ",
+            "id_user_sec"
         ]
-        df_transactions = self.repo.get_shared_transactions()
-        return df_transactions, columns_dataframe_config, columns_order
+        data, column_names = self.repo.get_shared_transactions()
+        df = pd.DataFrame(data, columns=column_names)
+        return df, columns_dataframe_config, columns_order
 
     def update_transaction_by_transfer(self, obj):
         return self.repo.update_transaction_by_transfer(obj)
 
-    def get_household_balance(self):
-        df = self.repo.get_shared_transactions()
+    def get_household_balance(self, df):
+        #data, columns_names = self.repo.get_shared_transactions()
+        #df = pd.DataFrame(data, columns=columns_names)
 
         balances = defaultdict(lambda: {
             "user_id": None,
