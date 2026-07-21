@@ -29,7 +29,7 @@ def calculare_balance(df):
 
 def household_expense_style(row):
     if row['is_household_expense']:
-        return ['background-color: #E6F2FF'] * len(row)
+        return ['background-color: #add8e6; color: #000000;'] * len(row)
     else:
         return [''] * len(row)
 
