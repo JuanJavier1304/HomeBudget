@@ -33,3 +33,6 @@ class TransferService(BaseService):
         ]
         return df_transfer, columns_dataframe_config, columns_order
 
+    def get_transfer_by_id(self, transfer_id):
+        data = self.repo.get_transfer_by_id(int(transfer_id))
+        return data

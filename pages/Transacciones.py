@@ -4,7 +4,7 @@ import datetime
 from decimal import Decimal
 
 # Importamos los services
-from services.date_services import get_dates_current_month
+from services.date_services import get_dates_current_month, get_today
 from services.catalog_service import CatalogService
 from services.user_service import UserService
 from services.transaction_service import TransactionService
@@ -103,7 +103,7 @@ df_date_interval = load_catalog("date_interval")
 def updateTransaction(transaction_id):
 
     # Inicializamos variables con valores vacíos
-    val_date=datetime.date.today()
+    val_date=get_today()
     val_transaction_type=int(df_transaction_types['id'].iloc[0])
     val_description=None
     val_amount=0.0

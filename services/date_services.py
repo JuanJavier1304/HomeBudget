@@ -1,7 +1,7 @@
 import datetime
 import calendar
 import pandas as pd
-from repository.date_interval_repository import DateIntervalRepository
+from zoneinfo import ZoneInfo
 
 def get_dates_current_month():
     """
@@ -57,8 +57,6 @@ def remove_timezone(df):
 
     return df
 
-
-
 def getPeriodName(start_date, end_date):
     """
     Devuelve el nombre del período en formato MMMAAA-MMMAAA.
@@ -74,3 +72,7 @@ def getPeriodName(start_date, end_date):
     
     return f"{init_part} - {end_part}"
 
+def get_today():
+    zona_lima = ZoneInfo("America/Lima")
+    today = datetime.datetime.now(zona_lima).date()
+    return today

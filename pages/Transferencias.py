@@ -1,13 +1,13 @@
 # Importamos streamlit y librerías necesarias
 import streamlit as st
-import datetime
+from datetime import datetime
 from decimal import Decimal
 from io import BytesIO
 from openpyxl import Workbook
 # Importamos los services y script para autenticación
 from services.transaction_service import TransactionService
 from services.transfer_service import TransferService
-from services.date_services import remove_timezone
+from services.date_services import remove_timezone, get_today
 from services.utils_services import rename_columns_df_transfer_excel
 from services.session_service import require_login, get_current_user_id
 # Importamos models
@@ -38,7 +38,12 @@ def get_household_balance(df):
         service = TransactionService(session)
         return service.get_household_balance(df)
 
-def insert_transfer(transfer):
+def get_transfer_by_id(transfer_id):
+    with get_session() as session:
+        service = TransferService(session)
+        return service.get_transfer_by_id(transfer_id)
+    
+def insert_or_update_transfer(transfer):
     with get_session() as session:
         service = TransferService(session)
         return service.update(transfer)
@@ -73,17 +78,42 @@ def generate_excel(df):
     return output
 
 @st.dialog("Transferencia", width="medium")
-def add_transfer_dialog(df_transactions, id_from, name_from, id_to, name_to, diff):
-    today = datetime.date.today()
-    st.info(f"## :material/money_bag: Se saldará el monto de S/: `{diff:.2f}`\n"
-        f"### :material/person: De: **{name_from}**\n"
-        f"### :material/person: Hacia: **{name_to}**\n"
-        f"### :material/today: Fecha de hoy: **{today}**"
+def add_transfer_dialog(id_transfer=None, df_transactions=None, id_from=None, name_from=None, id_to=None, name_to=None, diff=None):
+    init_date_transfer = get_today()
+    init_comment = None
+    init_name_from = name_from
+    init_name_to = name_to
+    init_amount_transfer = Decimal(diff) if diff is not None else None
+    init_mensaje = "Se saldará el monto de S/:"
+    init_id_from = int(id_from) if id_from is not None else None
+    init_id_to = int(id_to) if id_to is not None else None
+    if id_transfer:
+        #Traigo todos los valores de la transferencia
+        transfer_obj = get_transfer_by_id(id_transfer)
+        init_date_transfer = transfer_obj.date_transfer
+        init_comment = transfer_obj.comment
+        init_name_from = transfer_obj.user_name_from
+        init_name_to = transfer_obj.user_name_to
+        init_amount_transfer = transfer_obj.amount_transfer
+        init_id_from = transfer_obj.user_id_from
+        init_id_to = transfer_obj.user_id_to
+        init_mensaje = "Monto de transferencia S/:"
+
+    st.info(f"## :material/money_bag: {init_mensaje} {init_amount_transfer:.2f}")
+    st.write(
+        f"### :material/person: De: **{init_name_from}**\n"
+        f"### :material/person: Hacia: **{init_name_to}**\n"
         f"")
 
+    input_date = st.date_input(
+            "Fecha de transferencia",
+            key="input_date_transfer",
+            value=init_date_transfer
+        )
     input_comment = st.text_area(
         "Comentario",
         key="input_comentario",
+        value=init_comment,
         max_chars=150
     )
 
@@ -93,25 +123,28 @@ def add_transfer_dialog(df_transactions, id_from, name_from, id_to, name_to, dif
         width="stretch",
         type="primary"
     )
+
     if save_transfer:
-        today = datetime.date.today()
         transfer_to_insert = Transfer(
-            id_user_from=int(id_from),
-            id_user_to=int(id_to),
-            amount_transfer=Decimal(diff),
-            date_transfer=today,
+            id=int(id_transfer),
+            id_user_from=init_id_from,
+            id_user_to=init_id_to,
+            amount_transfer=init_amount_transfer,
+            date_transfer=input_date,
             comment=input_comment
         )
 
         try:
-            transfer_inserted = insert_transfer(transfer_to_insert)
-            for index, row in df_transactions.iterrows():
-                transaction_to_update = Transaction(
-                    id=row['id'],
-                    transfer_id=transfer_inserted.id,
-                    real_amount=(row['amount']-row['assigned_amount'])
-                )
-                transaction_updated = update_transaction(transaction_to_update)
+            transfer_inserted = insert_or_update_transfer(transfer_to_insert)
+            if id_transfer is None:
+                transfer_inserted = insert_or_update_transfer(transfer_to_insert)
+                for index, row in df_transactions.iterrows():
+                    transaction_to_update = Transaction(
+                        id=row['id'],
+                        transfer_id=transfer_inserted.id,
+                        real_amount=(row['amount']-row['assigned_amount'])
+                    )
+                    transaction_updated = update_transaction(transaction_to_update)
             st.toast("Transacción guardada correctamente.")
             st.rerun()
         except ValueError as e:
@@ -188,7 +221,22 @@ with tab_fix_pendings:
                     label="Saldar pendientes",
                     icon=":material/check_circle:",
                     on_click=add_transfer_dialog,
-                    args=(df_filtrado,metric3_id_from,metric3_name_from,metric3_id_to,metric3_name_to,metric3_diff),
+                    #args=(
+                    #    df_transactions=df_filtrado,
+                    #    id_from=metric3_id_from,
+                    #    name_from=metric3_name_from,
+                    #    id_to=metric3_id_to,
+                    #    name_to=metric3_name_to,
+                    #    diff=metric3_diff
+                    #)
+                    kwargs={
+                        "df_transactions": df_filtrado,
+                        "id_from": metric3_id_from,
+                        "name_from": metric3_name_from,
+                        "id_to": metric3_id_to,
+                        "name_to": metric3_name_to,
+                        "diff": metric3_diff
+                    },
                     type="primary",
                     use_container_width=True,
                     #disabled=disabled_check
@@ -206,19 +254,48 @@ with tab_show_transfer:
     if df_show_transfer.empty:
         st.info("No hay información para mostrar")
     else:
-        #Se reserva espacio para el botón de descarga en Excel
-        col_subtitle, col_download = st.columns([4,1])
-        with col_subtitle:
-            st.subheader("Historial")
+        st.subheader("Historial")
+        col_edit, col_download = st.columns([4,1])
+        with col_edit:
+            edit_container = st.container()
         with col_download:
+            #Se reserva espacio para el botón de descarga en Excel
             btn_dwnl_xls_transfer = st.container()
-        st.dataframe(
+
+        event_show_transfers = st.dataframe(
             df_transfer_styled,
             column_config=columns_df_config_show_transfer,
             use_container_width=True,
+            on_select="rerun",
+            selection_mode="single-row",
+            hide_index=True
             #height = 500
         )
         st.write(f"{len(df_show_transfer)} filas.")
+
+        with edit_container:
+            selected_rows_show_transfer = event_show_transfers.selection.rows
+            
+            id_transfer=None
+            status_btn_edit = True
+            if selected_rows_show_transfer:
+                # Hacemos el balance inicial
+                id_transfer = df_show_transfer.iloc[selected_rows_show_transfer]['id'].iloc[0]
+                status_btn_edit = False
+            else:
+                status_btn_edit = True
+            
+            btn_edit = st.button(
+                ":material/edit: Editar transferencia",
+                type="primary",
+                disabled=status_btn_edit,
+                on_click=add_transfer_dialog,
+                # args=(id_transfer=id_transfer)
+                kwargs={
+                    "id_transfer": id_transfer
+                }
+            )
+            
         df_excel = (
             remove_timezone(df_show_transfer)
             .rename(columns=rename_columns_df_transfer_excel())
@@ -232,4 +309,5 @@ with tab_show_transfer:
                 file_name=f"Reporte_Transferencias.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
+        
 
