@@ -238,6 +238,7 @@ class AccountHolder(SQLModel, table=True):
     relationship: str = Field(max_length=50)
     is_enabled: Optional[bool] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    opening_balance: Decimal
 
     # Relaciones
     user: Optional["User"] = Relationship(back_populates="account_holder")
