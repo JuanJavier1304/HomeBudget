@@ -87,6 +87,8 @@ def add_transfer_dialog(id_transfer=None, df_transactions=None, id_from=None, na
     init_mensaje = "Se saldará el monto de S/:"
     init_id_from = int(id_from) if id_from is not None else None
     init_id_to = int(id_to) if id_to is not None else None
+
+    st.write(df_transactions)
     if id_transfer:
         #Traigo todos los valores de la transferencia
         transfer_obj = get_transfer_by_id(id_transfer)
@@ -126,7 +128,7 @@ def add_transfer_dialog(id_transfer=None, df_transactions=None, id_from=None, na
 
     if save_transfer:
         transfer_to_insert = Transfer(
-            id=int(id_transfer),
+            id=int(id_transfer) if id_transfer is not None else None,
             id_user_from=init_id_from,
             id_user_to=init_id_to,
             amount_transfer=init_amount_transfer,
@@ -137,7 +139,6 @@ def add_transfer_dialog(id_transfer=None, df_transactions=None, id_from=None, na
         try:
             transfer_inserted = insert_or_update_transfer(transfer_to_insert)
             if id_transfer is None:
-                transfer_inserted = insert_or_update_transfer(transfer_to_insert)
                 for index, row in df_transactions.iterrows():
                     transaction_to_update = Transaction(
                         id=row['id'],
