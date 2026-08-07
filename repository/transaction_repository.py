@@ -32,7 +32,8 @@ class TransactionRepository(BaseRepository):
                 PaymentMethod.name.label("payment_method_name"),
                 TransactionVariability.name.label("transaction_variability_name"),
                 Transaction.comment,
-                Transaction.is_household_expense
+                Transaction.is_household_expense,
+                Transaction.real_amount
         )
     		.outerjoin(Category, Transaction.category_id == Category.id)
     		.outerjoin(Subcategory, Transaction.subcategory_id == Subcategory.id)

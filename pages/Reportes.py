@@ -1,3 +1,5 @@
+import pandas as pd
+
 import streamlit as st
 from io import BytesIO
 from openpyxl import Workbook
@@ -7,149 +9,143 @@ from database.connection import get_session
 # Importamos script para autenticación
 from services.session_service import require_login, get_current_user_id
 from services.transaction_service import TransactionService
-from services.date_services import get_current_date_YYYYMM, remove_timezone
+from services.catalog_service import CatalogService
+from services.date_services import remove_timezone, get_dates_current_month, get_today
 from services.utils_services import rename_columns_df_excel
 
 
 # Útiles para el script
-st.set_page_config(page_title="Reporte Mensual", layout="wide")
+st.set_page_config(page_title="Reportes", layout="wide")
 require_login() ###### Autenticación (si no estás en sesión, no muestra página) ######
 USER_ID = get_current_user_id() ###### Obtener el usuario en sesión
 
+# --- CAPA DE SERVICIOS PARA TRANSACCIONES ---
 @st.cache_data
-def get_transactions_by_month(user_id, year, month):
+def get_transactions_by_date_range(user_id, start_date, end_date):
     with get_session() as session:
         service = TransactionService(session)
-        return service.get_transactions_by_month(user_id, year, month)
+        return service.get_by_date_range(user_id, start_date, end_date)
 
-def calculare_balance(df):
+@st.cache_data
+def load_catalog(model_name: str):
     with get_session() as session:
-        service = TransactionService(session)
-        return service.calculare_balance(df)
+        catalog_service = CatalogService(session)
+        return catalog_service.get_catalog(model_name)
 
-def household_expense_style(row):
-    if row['is_household_expense']:
-        return ['background-color: #add8e6; color: #000000;'] * len(row)
-    else:
-        return [''] * len(row)
 
-def color_transaction_type(value):
-    if value == "Gasto":
-        return "color: #C62828"
-    elif value == "Ingreso":
-        return "color: #2E7D32;"
-    return ""
+st.title(":material/assignment: Reportes")
 
-def color_amount(row):
-    if row["final_amount"] == "Ingreso":
-        return "color: #2E7D32;"
-    else:
-        return "color: #C62828;"
-
-def generate_excel(df):
-    wb = Workbook()
-    ws = wb.active
-    ws.title = f"Reporte"
-
-    # Encabezados
-    ws.append(df.columns.tolist())
-
-    # Datos
-    for row in df.itertuples(index=False):
-        ws.append(row)
-
-    output = BytesIO()
-    wb.save(output)
-    output.seek(0)
-
-    return output
-
-st.title(":material/bar_chart: Reporte mensual")
-#st.header(":bar_chart: Control de Gastos e Ingresos", divider="blue")
 
 with st.container(border=True):
-    init_dates = get_current_date_YYYYMM()
-    col_year, col_month, col_spaces = st.columns([1,1,2])
-    with col_year:
-        # Selector de Año: Se posiciona automáticamente en el año actual
-        selected_year = st.selectbox(
-            "Año",
-            options=init_dates["anos"],
-            index=init_dates["idx_ano"]
+    col_intervals, col_date_range = st.columns(2)
+    with col_intervals:
+        ####### Inicializamos rango de fechas del mes actual #######
+        df_date_interval = load_catalog("date_interval")
+        interval_options = {
+            row["name"]: {
+                "inicio": row["start_date"],
+                "fin": row["end_date"],
+            }
+            for _, row in df_date_interval.iterrows()
+        }
+
+        selected_date_interval = st.selectbox(
+            "Selecciona un intervalo:",
+            options=list(interval_options.keys()),
+            index=None
         )
-    with col_month:
-        # Selector de Mes: Se posiciona automáticamente en el mes actual
-        selected_month = st.selectbox(
-            "Mes",
-            options=init_dates["meses"],
-            index=init_dates["idx_mes"],
-            format_func=lambda x: init_dates["mapeo_meses"][x]
+        fecha_inicio=None
+        fecha_fin=None
+        if selected_date_interval is not None:
+            fecha_inicio = interval_options[selected_date_interval]["inicio"]
+            fecha_fin = interval_options[selected_date_interval]["fin"]
+
+    with col_date_range:
+        ####### Inicializamos rango de fechas del mes actual #######
+        if fecha_inicio is None or fecha_fin is None:
+            first_day, last_day = get_dates_current_month()
+        else:
+            first_day = fecha_inicio
+            last_day = fecha_fin
+
+        # Generamos un key dinámico basado en el intervalo seleccionado
+        # Si cambia el intervalo, cambia el key, forzando la actualización visual
+        input_key = f"date_selector_{selected_date_interval}"
+
+        date_range = st.date_input(
+            "Selecciona un rango de fechas",
+            value=(first_day, last_day),
+            key=input_key
         )
 
-    # 1: DF, 2: Nombre de columnas, 3: Orden de columnas
-    df_transactions, columns_dataframe_config, columns_order = get_transactions_by_month(USER_ID, selected_year, selected_month)
-    df_show = df_transactions[columns_order]
+with st.container(border=True):
+    col_cat, col_subcat, col_tx_type = st.columns(3)
+    with col_cat:
+        ## FILTRO MÚLTIPLE DE CATEGORÍAS
+        df_categories = load_catalog("category")
+        list_categories = df_categories.name.tolist()
+        selected_categories = st.multiselect(
+            label="Filtra por categorías:",
+            options=list_categories,
+            default=list_categories
+        )
+    with col_subcat:
+        ## FILTRO MÚLTIPLE DE SUBCATEGORÍAS
+        df_subcategories = load_catalog("subcategory") # Traemos todas las subcategorías
+        df_subcat_merge = pd.merge(
+            df_categories, 
+            df_subcategories, 
+            left_on='id', 
+            right_on='category_id',
+            suffixes=('_category', '_subcategory')
+        ) # Join con categories
+        df_subcategories = df_subcat_merge[df_subcat_merge["name_category"].isin(selected_categories)]  # Filtramos subcategorías según las categorías seleccionadas
+        list_subcategories = df_subcategories.name_subcategory.tolist()
+        selected_subcategories = st.multiselect(
+            label="Filtra por subcategorías:",
+            options=list_subcategories,
+            default=list_subcategories
+        )
+    with col_tx_type:
+        ## FILTRO MÚLTIPLE DE GASTOS O INGRESO
+        df_transaction_types = load_catalog("transaction_type")
+        list_transaction_types = df_transaction_types.name.tolist()
+        selected_transaction_types = st.multiselect(
+            label="Filtra por tipo de transacción:",
+            options=list_transaction_types,
+            default=list_transaction_types
+        )
 
-    total_income, total_expense, balance = calculare_balance(df_transactions)
-    colsumm1, colsumm2, colsumm3 = st.columns(3)
-    with colsumm1:
-        st.metric(
-            label="🟢 Total Ingresos",
-            value=f"S/{total_income:,.2f}",
-            delta=total_income if total_income > 0 else None
-        )
-    with colsumm2:
-        st.metric(
-            label="🔴 Total Gastos",
-            value=f"S/{total_expense:,.2f}",
-            delta=-total_expense if total_expense > 0 else None
-        )
-    with colsumm3:
-        st.metric(
-            label="⚖️ Balance Neto",
-            value=f"S/{balance:,.2f}",
-            delta=f"S/{balance:,.2f}",
-            delta_color="off"
-        )
 
-col_link_transactions, col_download = st.columns([4,1])
-with col_link_transactions:
+if isinstance(date_range, tuple) and len(date_range) == 2:
+    start_date, end_date = date_range
+    df_transacciones, columns_dataframe_config = get_transactions_by_date_range(
+            user_id = USER_ID,
+            start_date = start_date,
+            end_date = end_date
+        )
     st.page_link("pages/Transacciones.py", label="Agregar/Editar transacciones") 
-with col_download:
-    dwnlbtn = st.container()
 
-df_styled = (
-    df_show.style
-    .apply(household_expense_style, axis=1)
-    .apply(lambda row: [color_amount(row)] if row.name >= 0 else [""],
-        subset=["final_amount"],
-        axis=1)
-    .map(color_transaction_type, subset=["transaction_type_name"])
-    .set_properties(subset=["final_amount"],**{"font-weight": "bold"})
-)
-# Mostrar el detalle
-if df_show.empty:
-    st.info("No hay información para mostrar, seleccione otro año/mes")
-else:
-    st.dataframe(
-        df_styled,
-        column_config=columns_dataframe_config,
-        hide_index=True,
+    df_transacciones["amount"] = df_transacciones["real_amount"].combine_first(df_transacciones["amount"]) # Reemplaza amount con real_amount, a menos que real_amount sea nulo
+    columns_dataframe_config["id"] = None # No necesitamos el ID en el DataFrame mostrado
+    columns_dataframe_config["real_amount"] = None # Borramos el campo de monto real del DataFrame mostrado
+
+
+    df_show = df_transacciones[df_transacciones['category_name'].isin(selected_categories)]
+    df_filtrado = df_transacciones[
+        (df_transacciones['category_name'].isin(selected_categories)) &
+        (df_transacciones['subcategory_name'].isin(selected_subcategories)) &
+        (df_transacciones['transaction_type_name'].isin(selected_transaction_types))
+    ]
+    selected = st.dataframe(
+        df_filtrado,
+        #on_select="rerun",
+        #selection_mode="single-row",
         use_container_width=True,
-        height = 500
+        column_config=columns_dataframe_config,
+        hide_index=True
     )
-    st.write(f"{len(df_show)} filas.")
-    st.write(":blue-background[Nota: En celeste los gastos compartidos.]")
-    df_excel = (
-        remove_timezone(df_show)
-        .rename(columns=rename_columns_df_excel())
-    )
-    excel_file = generate_excel(df_excel)
+    st.write(f"{len(df_transacciones)} filas.")
 
-    with dwnlbtn:
-        st.download_button(
-            label=":material/download: Descargar Excel",
-            data=excel_file,
-            file_name=f"Reporte_{selected_year}{selected_month:02d}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+else:
+    st.info("Por favor, selecciona la fecha de finalización en el calendario.")

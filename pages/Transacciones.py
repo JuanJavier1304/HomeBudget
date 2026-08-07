@@ -66,28 +66,9 @@ def get_transaction_participants(transaction_id):
 
 @st.cache_data
 def load_catalog(model_name: str):
-    """
-    Función única y optimizada con caché para resolver cualquier catálogo.
-    Streamlit identificará el caché basado en la cadena 'model_name'.
-    """
-    # Mapeo de configuración para mantener el dinamismo limpio
-    catalog_map = {
-        "category": (Category, "cat_repo"),
-        "subcategory": (Subcategory, "sub_repo"),
-        "payment_method": (PaymentMethod, "pay_repo"),
-        "transaction_type": (TransactionType, "type_repo"),
-        "transaction_variability": (TransactionVariability, "var_repo"),
-        "date_interval": (DateInterval, "dt_interval_repo")
-    }
-
-    if model_name not in catalog_map:
-        raise ValueError(f"Catálogo {model_name} no configurado.")
-
-    model_class, repo_attr = catalog_map[model_name]
-
     with get_session() as session:
         catalog_service = CatalogService(session)
-        return catalog_service.get_catalog(model_class, repo_attr)
+        return catalog_service.get_catalog(model_name)
 
 
 # Obtenemos los catálogos para los selectbox

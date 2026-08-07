@@ -7,6 +7,10 @@ from repository.transaction_type_repository import TransactionTypeRepository
 from repository.transaction_variability_repository import TransactionVariabilityRepository
 from repository.date_interval_repository import DateIntervalRepository
 
+# Importamos models
+from models import Category, Subcategory, PaymentMethod, TransactionType, TransactionVariability, DateInterval
+
+
 class CatalogService(BaseService):
     def __init__(self, session: Session):
         super().__init__(session)
@@ -19,7 +23,22 @@ class CatalogService(BaseService):
         self.var_repo = TransactionVariabilityRepository(self.session)
         self.dt_interval_repo = DateIntervalRepository(self.session)
 
-    def get_catalog(self, model_class, repo_attr: str):
+    def get_catalog(self, model_name):
         """Obtiene de forma dinámica los datos usando el repositorio adecuado."""
+            # Mapeo de configuración para mantener el dinamismo limpio
+        catalog_map = {
+            "category": (Category, "cat_repo"),
+            "subcategory": (Subcategory, "sub_repo"),
+            "payment_method": (PaymentMethod, "pay_repo"),
+            "transaction_type": (TransactionType, "type_repo"),
+            "transaction_variability": (TransactionVariability, "var_repo"),
+            "date_interval": (DateInterval, "dt_interval_repo")
+        }
+
+        if model_name not in catalog_map:
+            raise ValueError(f"Catálogo {model_name} no configurado.")
+
+        model_class, repo_attr = catalog_map[model_name]
+        
         repo = getattr(self, repo_attr)
         return repo.get_all(model_class)

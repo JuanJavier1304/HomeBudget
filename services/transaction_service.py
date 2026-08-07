@@ -19,6 +19,7 @@ class TransactionService(BaseService):
             "category_name": st.column_config.Column("Categoría"),
             "subcategory_name": st.column_config.Column("Subcategoría"),
             "amount": st.column_config.NumberColumn("Monto", format="S/%.2f"),  # Formatea como dinero si aplica
+            "real_amount": st.column_config.NumberColumn("Monto Real", format="S/%.2f"),  # Formatea como dinero si aplica
             "payment_method_name": st.column_config.Column("Método Pago"),
             "transaction_variability_name": st.column_config.Column("Fijo/Variable"),
             "comment": st.column_config.Column("Comentario"),
